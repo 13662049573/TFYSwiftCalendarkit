@@ -164,6 +164,13 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         let firstCell = view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 0, section: 0))
         XCTAssertEqual(firstCell?.frame.height ?? 0, 50, accuracy: 0.1)
         XCTAssertEqual(firstCell?.frame.minY ?? 0, 44, accuracy: 0.1)
+        let secondCell = view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 1, section: 0))
+        XCTAssertEqual(firstCell?.frame.maxX ?? 0, secondCell?.frame.minX ?? -1, accuracy: 0.001)
+        XCTAssertEqual(firstCell?.frame.intersection(secondCell?.frame ?? .zero).width ?? -1, 0, accuracy: 0.001)
+        let firstCellOfSecondRow = view.collectionViewLayout.layoutAttributesForItem(
+            at: IndexPath(item: 7, section: 0)
+        )
+        XCTAssertEqual(firstCell?.frame.maxY ?? 0, firstCellOfSecondRow?.frame.minY ?? -1, accuracy: 0.001)
         let firstHeader = view.collectionViewLayout.layoutAttributesForSupplementaryView(
             ofKind: UICollectionView.elementKindSectionHeader,
             at: IndexPath(item: 0, section: 0)

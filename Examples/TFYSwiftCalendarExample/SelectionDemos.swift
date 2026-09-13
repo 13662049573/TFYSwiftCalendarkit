@@ -21,15 +21,20 @@ private final class RangePickerCell: TFYSwiftCalendarCell {
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        setUpRangeLayers()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setUpRangeLayers()
+    }
+
+    private func setUpRangeLayers() {
         rangeLayer.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.24).cgColor
         endpointLayer.backgroundColor = UIColor.systemOrange.cgColor
         contentView.layer.insertSublayer(rangeLayer, below: titleLabel.layer)
         contentView.layer.insertSublayer(endpointLayer, below: titleLabel.layer)
         shapeLayer.isHidden = true
-    }
-
-    required init?(coder: NSCoder) {
-        super.init(coder: coder)
     }
 
     override func prepareForReuse() {
@@ -48,7 +53,32 @@ private final class RangePickerCell: TFYSwiftCalendarCell {
         rangeLayer.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.24).resolvedColor(with: traitCollection).cgColor
         endpointLayer.backgroundColor = UIColor.systemOrange.resolvedColor(with: traitCollection).cgColor
         titleLabel.frame = contentView.bounds
-        rangeLayer.frame = CGRect(x: 0, y: contentView.bounds.midY - 20, width: contentView.bounds.width, height: 40)
+        let rangeY = contentView.bounds.midY - 20
+        switch role {
+        case .start:
+            rangeLayer.frame = CGRect(
+                x: contentView.bounds.midX,
+                y: rangeY,
+                width: contentView.bounds.maxX - contentView.bounds.midX,
+                height: 40
+            )
+        case .end:
+            rangeLayer.frame = CGRect(
+                x: contentView.bounds.minX,
+                y: rangeY,
+                width: contentView.bounds.midX - contentView.bounds.minX,
+                height: 40
+            )
+        case .middle:
+            rangeLayer.frame = CGRect(
+                x: contentView.bounds.minX,
+                y: rangeY,
+                width: contentView.bounds.width,
+                height: 40
+            )
+        case .none, .single:
+            rangeLayer.frame = .zero
+        }
         let diameter = min(40, min(contentView.bounds.width, contentView.bounds.height) - 6)
         endpointLayer.frame = CGRect(
             x: contentView.bounds.midX - diameter / 2,
@@ -63,17 +93,8 @@ private final class RangePickerCell: TFYSwiftCalendarCell {
         self.role = role
         rangeLayer.isHidden = role == .none || role == .single
         endpointLayer.isHidden = role == .none || role == .middle
-        switch role {
-        case .start:
-            rangeLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
-            rangeLayer.cornerRadius = 20
-        case .end:
-            rangeLayer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
-            rangeLayer.cornerRadius = 20
-        default:
-            rangeLayer.maskedCorners = []
-            rangeLayer.cornerRadius = 0
-        }
+        rangeLayer.maskedCorners = []
+        rangeLayer.cornerRadius = 0
         setNeedsLayout()
     }
 }

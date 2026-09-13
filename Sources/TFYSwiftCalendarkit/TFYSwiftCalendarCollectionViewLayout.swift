@@ -127,14 +127,20 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
         }
 
         let attributes = UICollectionViewLayoutAttributes(forCellWith: indexPath)
-        attributes.frame = CGRect(
-            x: pageOrigin.x + sectionInsets.left + CGFloat(column) * columnWidth,
-            y: pageOrigin.y + (usesContinuousVerticalLayout ? max(0, continuousSectionHeaderHeight) : 0)
-                + sectionInsets.top + CGFloat(row) * rowHeight,
-            width: columnWidth,
-            height: rowHeight
-        ).integral
+        let scale = max(1, collectionView.traitCollection.displayScale)
+        let contentMinX = pageOrigin.x + sectionInsets.left
+        let rowMinY = pageOrigin.y + (usesContinuousVerticalLayout ? max(0, continuousSectionHeaderHeight) : 0)
+            + sectionInsets.top
+        let minX = pixelAligned(contentMinX + CGFloat(column) * columnWidth, scale: scale)
+        let maxX = pixelAligned(contentMinX + CGFloat(column + 1) * columnWidth, scale: scale)
+        let minY = pixelAligned(rowMinY + CGFloat(row) * rowHeight, scale: scale)
+        let maxY = pixelAligned(rowMinY + CGFloat(row + 1) * rowHeight, scale: scale)
+        attributes.frame = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
         return attributes
+    }
+
+    private func pixelAligned(_ value: CGFloat, scale: CGFloat) -> CGFloat {
+        (value * scale).rounded() / scale
     }
 
     public override func layoutAttributesForSupplementaryView(
