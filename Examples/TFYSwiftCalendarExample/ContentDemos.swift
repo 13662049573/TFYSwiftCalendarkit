@@ -12,6 +12,7 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
     private let statusLabel = UILabel()
     private var showsLunar = false
     private var showsEvents = false
+    private var calendarHeightConstraint: NSLayoutConstraint!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -45,11 +46,12 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
             $0.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview($0)
         }
+        calendarHeightConstraint = calendarView.heightAnchor.constraint(equalToConstant: calendarView.preferredHeight)
         NSLayoutConstraint.activate([
             calendarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             calendarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             calendarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            calendarView.heightAnchor.constraint(equalToConstant: calendarView.preferredHeight),
+            calendarHeightConstraint,
             statusLabel.topAnchor.constraint(equalTo: calendarView.bottomAnchor, constant: 20),
             statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20)
@@ -82,6 +84,21 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
         at monthPosition: TFYSwiftCalendarMonthPosition
     ) {
         statusLabel.text = "已选 \(calendar.selectedDates.count) 天，最近：\(DemoDate.text(date))"
+    }
+
+    func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {
+        calendarHeightConstraint.constant = bounds.height
+        let changes = { self.view.layoutIfNeeded() }
+        if animated {
+            UIView.animate(
+                withDuration: 0.28,
+                delay: 0,
+                options: [.curveEaseInOut, .beginFromCurrentState],
+                animations: changes
+            )
+        } else {
+            changes()
+        }
     }
 
     private func eventColor(_ event: EKEvent) -> UIColor {

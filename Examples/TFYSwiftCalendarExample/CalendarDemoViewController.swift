@@ -70,8 +70,6 @@ final class CalendarDemoViewController: UIViewController {
         calendarView.appearance.fillType = .linked
         calendarView.appearance.selectionAnimationScale = 0.96
         calendarView.appearance.selectionAnimationDuration = 0.16
-        // Keep event dots beside the lunar subtitle so they never jump above the day number.
-        calendarView.appearance.eventOffset = CGPoint(x: 17, y: -6)
 
         calendarView.appearance.weekdaySymbols = ["日", "一", "二", "三", "四", "五", "六"]
         calendarView.appearance.weekdayTextColors = [

@@ -84,6 +84,17 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(spy.boundingRectChanges[0].height, view.preferredHeight, accuracy: 0.1)
     }
 
+    func testScopeGestureRequiresExplicitOptIn() {
+        let view = makeCalendarView()
+
+        XCTAssertFalse(view.allowsScopeGesture)
+        XCTAssertFalse(view.scopeGestureRecognizer.isEnabled)
+
+        view.allowsScopeGesture = true
+
+        XCTAssertTrue(view.scopeGestureRecognizer.isEnabled)
+    }
+
     func testDataSourceCanOverrideRangeAndContent() {
         let view = makeCalendarView()
         let source = DataSourceStub(
@@ -210,6 +221,28 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(initialLayers.count, 3)
         XCTAssertEqual(updatedLayers.count, 3)
         XCTAssertTrue(zip(initialLayers, updatedLayers).allSatisfy { $0 === $1 })
+    }
+
+    func testEventIndicatorUsesCenteredSlotBelowSubtitle() {
+        let cell = TFYSwiftCalendarCell(frame: CGRect(x: 0, y: 0, width: 70, height: 60))
+        cell.apply(
+            date: date(2024, 5, 5),
+            monthPosition: .current,
+            state: [],
+            selectionPosition: .none,
+            content: TFYSwiftCalendarDayContent(subtitle: "廿七", eventColors: [.systemRed, .systemBlue]),
+            style: TFYSwiftCalendarDayStyle(),
+            appearance: TFYSwiftCalendarAppearance(),
+            defaultTitle: "5",
+            defaultAccessibilityLabel: "May 5, 2024"
+        )
+
+        cell.layoutIfNeeded()
+
+        XCTAssertFalse(cell.eventIndicator.isHidden)
+        XCTAssertEqual(cell.eventIndicator.frame.midX, cell.contentView.bounds.midX, accuracy: 0.01)
+        XCTAssertLessThanOrEqual(cell.titleLabel.frame.maxY, cell.subtitleLabel.frame.minY)
+        XCTAssertLessThanOrEqual(cell.subtitleLabel.frame.maxY, cell.eventIndicator.frame.minY)
     }
 
     func testChineseSingleCharacterWeekdaysRemainDistinct() {

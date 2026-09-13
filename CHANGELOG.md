@@ -15,6 +15,8 @@
 - Removed selection and scope-transition flashes by updating visible cells in place and eliminating opacity-based scope animation.
 - Added custom weekday symbols, accessibility names, per-day colors/backgrounds, spacing, insets, borders, and pill corners.
 - Deferred weekday spacing and inset layout until a valid size is available, preventing zero-width Auto Layout conflicts.
+- Reserved independent date, subtitle, and centered event-dot slots to prevent event markers from drifting or overlapping text.
+- Made vertical month/week scope gestures opt-in and hardened the DIY demo's animated height transition.
 - Redesigned the complete overview demo with adaptive cards, a styled month/week control, clearer selection summaries, and uncluttered placeholders.
 
 ## 1.0.0

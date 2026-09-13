@@ -13,6 +13,13 @@ open class TFYSwiftCalendar: UIView {
     public let scopeGestureRecognizer = UIPanGestureRecognizer()
     public let swipeToChooseGestureRecognizer = UILongPressGestureRecognizer()
 
+    /// Enables the built-in vertical pan that collapses month scope to week scope and expands it back.
+    /// Disabled by default so ordinary scrolling cannot change scope unexpectedly.
+    public var allowsScopeGesture: Bool {
+        get { scopeGestureRecognizer.isEnabled }
+        set { scopeGestureRecognizer.isEnabled = newValue }
+    }
+
     public var calendar: Calendar = {
         var value = Calendar(identifier: .gregorian)
         value.locale = .current
@@ -279,6 +286,7 @@ open class TFYSwiftCalendar: UIView {
 
         scopeGestureRecognizer.addTarget(self, action: #selector(handleScopeGesture(_:)))
         scopeGestureRecognizer.delegate = self
+        scopeGestureRecognizer.isEnabled = false
         addGestureRecognizer(scopeGestureRecognizer)
 
         swipeToChooseGestureRecognizer.minimumPressDuration = 0.12

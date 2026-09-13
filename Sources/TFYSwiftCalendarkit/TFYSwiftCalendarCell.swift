@@ -51,6 +51,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         }
 
         contentView.addSubview(eventIndicator)
+        eventIndicator.isHidden = true
         clipsToBounds = false
         contentView.clipsToBounds = false
     }
@@ -67,6 +68,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         imageView.image = nil
         topImageView.image = nil
         eventIndicator.colors = []
+        eventIndicator.isHidden = true
         accessibilityLabel = nil
         accessibilityValue = nil
         accessibilityHint = nil
@@ -90,15 +92,29 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         shapeLayer.frame = bounds
         shapeLayer.path = selectionPath(in: shapeRect).cgPath
 
-        titleLabel.frame = CGRect(x: 3, y: centerY - titleHeight / 2, width: bounds.width - 6, height: titleHeight)
+        let auxiliaryHeight = min(15, bounds.height * 0.22)
+        let hasBottomAccessory = !(subtitleLabel.text?.isEmpty ?? true) || imageView.image != nil
+        let hasEvents = !eventIndicator.colors.isEmpty
+        let bottomPadding = min(3, max(1, bounds.height * 0.04))
+        let eventHeight = hasEvents ? min(7, max(4, bounds.height * 0.12)) : 0
+        let eventBottom = min(bounds.height - bottomPadding, shapeRect.maxY - 1)
+        let eventY = eventBottom - eventHeight
+        let accessoryBottom = hasEvents ? eventY - 1 : bounds.height - bottomPadding
+        let accessoryY = accessoryBottom - auxiliaryHeight
+        let titleUpperBound = hasBottomAccessory
+            ? accessoryY - 1
+            : (hasEvents ? eventY - 1 : bounds.height - bottomPadding)
+        let preferredTitleY = centerY - titleHeight / 2
+        let titleY = min(preferredTitleY, max(1, titleUpperBound - titleHeight))
+
+        titleLabel.frame = CGRect(x: 3, y: titleY, width: bounds.width - 6, height: titleHeight)
             .offsetBy(dx: (appliedStyle.titleOffset?.x ?? appliedAppearance?.titleOffset.x ?? 0) + (appliedAppearance?.horizontalTitleInset ?? 0),
                       dy: appliedStyle.titleOffset?.y ?? appliedAppearance?.titleOffset.y ?? 0)
 
-        let auxiliaryHeight = min(15, bounds.height * 0.22)
         topSubtitleLabel.frame = CGRect(x: 2, y: 1, width: bounds.width - 4, height: auxiliaryHeight)
             .offsetBy(dx: appliedStyle.topSubtitleOffset?.x ?? appliedAppearance?.topSubtitleOffset.x ?? 0,
                       dy: appliedStyle.topSubtitleOffset?.y ?? appliedAppearance?.topSubtitleOffset.y ?? 0)
-        subtitleLabel.frame = CGRect(x: 2, y: bounds.height - auxiliaryHeight - 2, width: bounds.width - 4, height: auxiliaryHeight)
+        subtitleLabel.frame = CGRect(x: 2, y: accessoryY, width: bounds.width - 4, height: auxiliaryHeight)
             .offsetBy(dx: appliedStyle.subtitleOffset?.x ?? appliedAppearance?.subtitleOffset.x ?? 0,
                       dy: appliedStyle.subtitleOffset?.y ?? appliedAppearance?.subtitleOffset.y ?? 0)
 
@@ -106,10 +122,15 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         topImageView.frame = CGRect(x: bounds.midX - imageSide / 2, y: 1, width: imageSide, height: imageSide)
             .offsetBy(dx: appliedStyle.topImageOffset?.x ?? appliedAppearance?.topImageOffset.x ?? 0,
                       dy: appliedStyle.topImageOffset?.y ?? appliedAppearance?.topImageOffset.y ?? 0)
-        imageView.frame = CGRect(x: bounds.midX - imageSide / 2, y: bounds.height - imageSide - 2, width: imageSide, height: imageSide)
+        imageView.frame = CGRect(
+            x: bounds.midX - imageSide / 2,
+            y: accessoryY + (auxiliaryHeight - imageSide) / 2,
+            width: imageSide,
+            height: imageSide
+        )
             .offsetBy(dx: appliedStyle.imageOffset?.x ?? appliedAppearance?.imageOffset.x ?? 0,
                       dy: appliedStyle.imageOffset?.y ?? appliedAppearance?.imageOffset.y ?? 0)
-        eventIndicator.frame = CGRect(x: 2, y: bounds.height - 9, width: bounds.width - 4, height: 7)
+        eventIndicator.frame = CGRect(x: 2, y: eventY, width: bounds.width - 4, height: eventHeight)
             .offsetBy(dx: appliedStyle.eventOffset?.x ?? appliedAppearance?.eventOffset.x ?? 0,
                       dy: appliedStyle.eventOffset?.y ?? appliedAppearance?.eventOffset.y ?? 0)
 
@@ -153,6 +174,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
             eventIndicator.colors = customEvents
         }
         eventIndicator.fallbackColor = selected ? appearance.eventSelectionColor : appearance.eventDefaultColor
+        eventIndicator.isHidden = eventIndicator.colors.isEmpty
         setNeedsLayout()
     }
 

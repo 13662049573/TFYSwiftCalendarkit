@@ -131,7 +131,14 @@ For a scope transition:
 
 ```swift
 calendarView.setScope(.week, animated: true)
+
+// Optional: allow vertical swipes to collapse/expand month and week scope.
+calendarView.allowsScopeGesture = true
 ```
+
+The scope gesture is disabled by default so vertical scrolling cannot change the calendar scope unexpectedly.
+When Auto Layout fixes the calendar height, update that constraint from
+`calendar(_:boundingRectWillChange:animated:)` before opting into the gesture.
 
 For a compact continuous calendar with sticky month headers:
 
