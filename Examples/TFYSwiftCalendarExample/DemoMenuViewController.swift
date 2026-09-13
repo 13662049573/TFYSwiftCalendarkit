@@ -14,7 +14,7 @@ final class DemoMenuViewController: UITableViewController {
         DemoDescriptor(title: "DIY 日历", detail: "农历、系统日历事件、自定义主题", makeViewController: DIYExampleViewController.init),
         DemoDescriptor(title: "上一个 / 下一个", detail: "外部按钮控制日历翻页", makeViewController: ButtonsViewController.init),
         DemoDescriptor(title: "隐藏占位日期", detail: "自适应高度、垂直滚动与行分隔线", makeViewController: HidePlaceholderViewController.init),
-        DemoDescriptor(title: "逐日期外观", detail: "颜色、边框、圆角、图片、上下副标题", makeViewController: DelegateAppearanceViewController.init),
+        DemoDescriptor(title: "逐日期外观", detail: "柔和填充、圆形描边、事件点与图标标签", makeViewController: DelegateAppearanceViewController.init),
         DemoDescriptor(title: "全屏日历", detail: "无分页连续滚动、系统事件与农历", makeViewController: FullScreenExampleViewController.init),
         DemoDescriptor(title: "loadView 创建", detail: "纯代码生命周期与上下图片", makeViewController: LoadViewExampleViewController.init),
         DemoDescriptor(title: "月/周联动", detail: "日历高度变化、手势与列表联动", makeViewController: ScopeExampleViewController.init),

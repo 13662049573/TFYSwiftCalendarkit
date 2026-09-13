@@ -9,7 +9,7 @@ The menu contains runnable, pure-Swift examples for:
 - DIY colors, lunar text, and EventKit data
 - External previous/next page controls
 - Hidden placeholders, variable height, vertical scrolling, and separators
-- Per-date appearance callbacks
+- Per-date soft fills, circular outlines, event dots, icons, and labels
 - Full-screen continuous calendar with lunar and EventKit switches
 - Programmatic `loadView` construction and day images
 - Month/week scope transitions coordinated with a table view

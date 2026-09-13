@@ -10,6 +10,8 @@
 - Improved Dynamic Type, VoiceOver state descriptions, disabled-date traits, reduced-motion behavior, 44-point header controls, and dynamic-color layer updates.
 - Added packaged English and Simplified Chinese accessibility strings for Swift Package Manager and CocoaPods.
 - Expanded regression coverage and added automated package/example build checks.
+- Added configurable normal/selected border widths and a reusable circular-border day-style factory.
+- Refined the per-date appearance demo with true circular outlines, cleaner content separation, and an adaptive style legend.
 
 ## 1.0.0
 

@@ -89,7 +89,6 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
 
         shapeLayer.frame = bounds
         shapeLayer.path = selectionPath(in: shapeRect).cgPath
-        shapeLayer.lineWidth = 1
 
         titleLabel.frame = CGRect(x: 3, y: centerY - titleHeight / 2, width: bounds.width - 6, height: titleHeight)
             .offsetBy(dx: (appliedStyle.titleOffset?.x ?? appliedAppearance?.titleOffset.x ?? 0) + (appliedAppearance?.horizontalTitleInset ?? 0),
@@ -140,8 +139,12 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         let border = selected
             ? (appliedStyle.selectionBorderColor ?? appearance.borderColor(for: cellState))
             : (appliedStyle.borderColor ?? appearance.borderColor(for: cellState))
+        let borderWidth = selected
+            ? (appliedStyle.selectionBorderWidth ?? appearance.selectionBorderWidth)
+            : (appliedStyle.borderWidth ?? appearance.borderWidth)
         shapeLayer.fillColor = fill.resolvedColor(with: traitCollection).cgColor
         shapeLayer.strokeColor = border.resolvedColor(with: traitCollection).cgColor
+        shapeLayer.lineWidth = max(0, borderWidth)
         rowSeparatorLayer.backgroundColor = appearance.separatorColor.resolvedColor(with: traitCollection).cgColor
         rowSeparatorLayer.isHidden = appearance.separatorStyle == .none
 

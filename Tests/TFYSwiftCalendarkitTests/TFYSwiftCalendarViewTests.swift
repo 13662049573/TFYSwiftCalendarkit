@@ -238,6 +238,48 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertTrue(weekday.weekdayLabels.allSatisfy { $0.maximumContentSizeCategory == .extraExtraLarge })
     }
 
+    func testCircularBorderFactoryCreatesRoundedSeparateStyle() {
+        let style = TFYSwiftCalendarDayStyle.circularBorder(
+            borderColor: .systemIndigo,
+            borderWidth: 2.5,
+            selectionFillColor: .systemIndigo
+        )
+
+        XCTAssertEqual(style.fillType, .separate)
+        XCTAssertEqual(style.borderRadius, 1)
+        XCTAssertEqual(style.borderWidth, 2.5)
+        XCTAssertEqual(style.selectionBorderWidth, 2.5)
+        XCTAssertTrue(style.fillColor?.isEqual(UIColor.clear) == true)
+        XCTAssertTrue(style.borderColor?.isEqual(UIColor.systemIndigo) == true)
+    }
+
+    func testPerDateBorderWidthIsAppliedToCellLayer() {
+        let cell = TFYSwiftCalendarCell(frame: CGRect(x: 0, y: 0, width: 54, height: 54))
+        let appearance = TFYSwiftCalendarAppearance()
+        let style = TFYSwiftCalendarDayStyle.circularBorder(
+            borderColor: .systemTeal,
+            borderWidth: 3,
+            selectionFillColor: .systemTeal
+        )
+
+        cell.apply(
+            date: date(2024, 5, 11),
+            monthPosition: .current,
+            state: [],
+            selectionPosition: .none,
+            content: TFYSwiftCalendarDayContent(),
+            style: style,
+            appearance: appearance,
+            defaultTitle: "11",
+            defaultAccessibilityLabel: "May 11, 2024"
+        )
+        cell.layoutIfNeeded()
+
+        XCTAssertEqual(cell.shapeLayer.lineWidth, 3)
+        let pathBounds = cell.shapeLayer.path?.boundingBox ?? .zero
+        XCTAssertEqual(pathBounds.width, pathBounds.height, accuracy: 0.001)
+    }
+
     func testNonPagingVerticalLayoutUsesCompactContinuousSections() {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
         view.calendar = systemCalendar

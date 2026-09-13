@@ -72,6 +72,22 @@ extension CalendarViewController: TFYSwiftCalendarDataSource {
 }
 ```
 
+Use the built-in circular-outline factory when an individual date needs a clear,
+independent border. Border widths can also be configured globally through the appearance object.
+
+```swift
+func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? {
+    .circularBorder(
+        borderColor: .systemIndigo,
+        borderWidth: 2,
+        selectionFillColor: .systemIndigo
+    )
+}
+
+calendarView.appearance.borderWidth = 1
+calendarView.appearance.selectionBorderWidth = 2
+```
+
 For a contiguous selection:
 
 ```swift

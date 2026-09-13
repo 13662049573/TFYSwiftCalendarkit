@@ -123,6 +123,8 @@ public struct TFYSwiftCalendarDayStyle {
     public var selectionTopSubtitleColor: UIColor?
     public var borderColor: UIColor?
     public var selectionBorderColor: UIColor?
+    public var borderWidth: CGFloat?
+    public var selectionBorderWidth: CGFloat?
     public var eventColors: [UIColor]?
     public var selectionEventColors: [UIColor]?
     public var titleOffset: CGPoint?
@@ -136,6 +138,29 @@ public struct TFYSwiftCalendarDayStyle {
     public var selectionPosition: TFYSwiftCalendarSelectionPosition?
 
     public init() {}
+
+    /// Creates a separate, fully rounded date style with a visible outline.
+    ///
+    /// The selected state keeps the same outline width and uses the calendar's
+    /// selection fill unless `selectionFillColor` is supplied.
+    public static func circularBorder(
+        borderColor: UIColor,
+        borderWidth: CGFloat = 2,
+        fillColor: UIColor = .clear,
+        selectionFillColor: UIColor? = nil,
+        selectionBorderColor: UIColor? = nil
+    ) -> Self {
+        var style = Self()
+        style.fillType = .separate
+        style.borderRadius = 1
+        style.fillColor = fillColor
+        style.selectionFillColor = selectionFillColor
+        style.borderColor = borderColor
+        style.selectionBorderColor = selectionBorderColor ?? borderColor
+        style.borderWidth = max(0, borderWidth)
+        style.selectionBorderWidth = max(0, borderWidth)
+        return style
+    }
 }
 
 internal struct TFYSwiftCalendarDayKey: Hashable, Comparable {

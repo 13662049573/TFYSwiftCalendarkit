@@ -42,6 +42,8 @@ public final class TFYSwiftCalendarAppearance {
     public var todaySelectionColor = UIColor.systemBlue
     public var borderDefaultColor = UIColor.clear
     public var borderSelectionColor = UIColor.clear
+    public var borderWidth: CGFloat = 1
+    public var selectionBorderWidth: CGFloat = 1
     public var separatorColor = UIColor.separator.withAlphaComponent(0.45)
 
     /// `0` is a rectangle and `1` is the largest possible corner radius.
