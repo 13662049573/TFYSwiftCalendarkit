@@ -34,14 +34,19 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
 
     public override func layoutSubviews() {
         super.layoutSubviews()
-        rebuildLayers()
+        updateLayers()
     }
 
-    private func rebuildLayers() {
-        eventLayers.forEach { $0.removeFromSuperlayer() }
-        eventLayers.removeAll(keepingCapacity: true)
-
+    private func updateLayers() {
         let visibleColors = Array(colors.prefix(max(0, maximumVisibleEvents)))
+        while eventLayers.count > visibleColors.count {
+            eventLayers.removeLast().removeFromSuperlayer()
+        }
+        while eventLayers.count < visibleColors.count {
+            let dot = CAShapeLayer()
+            layer.addSublayer(dot)
+            eventLayers.append(dot)
+        }
         guard !visibleColors.isEmpty else { return }
 
         let dotDiameter = min(5, max(2, bounds.height))
@@ -50,14 +55,19 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
         var x = (bounds.width - totalWidth) / 2
         let y = (bounds.height - dotDiameter) / 2
 
-        for color in visibleColors {
-            let dot = CAShapeLayer()
+        for (index, color) in visibleColors.enumerated() {
+            let dot = eventLayers[index]
             dot.frame = CGRect(x: x, y: y, width: dotDiameter, height: dotDiameter)
             dot.path = UIBezierPath(ovalIn: dot.bounds).cgPath
-            dot.fillColor = (color.cgColor.components == nil ? fallbackColor : color).cgColor
-            layer.addSublayer(dot)
-            eventLayers.append(dot)
+            dot.fillColor = color.resolvedColor(with: traitCollection).cgColor
             x += dotDiameter + spacing
+        }
+    }
+
+    public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? true {
+            setNeedsLayout()
         }
     }
 }

@@ -20,28 +20,41 @@ open class TFYSwiftCalendar: UIView {
         return value
     }() {
         didSet {
-            normalizeCalendarConfiguration()
-            applyDefaultDateRangeIfNeeded()
-            reloadData()
+            guard !isApplyingCalendarConfiguration, calendar != oldValue else { return }
+            isApplyingCalendarConfiguration = true
+            locale = calendar.locale ?? locale
+            timeZone = calendar.timeZone
+            firstWeekday = Self.normalizedFirstWeekday(calendar.firstWeekday)
+            isApplyingCalendarConfiguration = false
+            calendarConfigurationDidChange()
         }
     }
 
     public var locale: Locale = .current {
         didSet {
-            calendar.locale = locale
+            guard !isApplyingCalendarConfiguration, locale != oldValue else { return }
+            updateCalendarConfiguration { $0.locale = locale }
         }
     }
 
     public var timeZone: TimeZone = .current {
         didSet {
-            calendar.timeZone = timeZone
+            guard !isApplyingCalendarConfiguration, timeZone != oldValue else { return }
+            updateCalendarConfiguration { $0.timeZone = timeZone }
         }
     }
 
     public var firstWeekday: Int = Calendar.current.firstWeekday {
         didSet {
-            firstWeekday = max(1, min(7, firstWeekday))
-            calendar.firstWeekday = firstWeekday
+            guard !isApplyingCalendarConfiguration else { return }
+            let normalized = Self.normalizedFirstWeekday(firstWeekday)
+            if firstWeekday != normalized {
+                isApplyingCalendarConfiguration = true
+                firstWeekday = normalized
+                isApplyingCalendarConfiguration = false
+            }
+            guard normalized != oldValue else { return }
+            updateCalendarConfiguration { $0.firstWeekday = normalized }
         }
     }
 
@@ -78,12 +91,23 @@ open class TFYSwiftCalendar: UIView {
         }
     }
 
+    /// Optional upper bound for multi-date selection. `nil` means unlimited.
+    public var maximumSelectedDates: Int? {
+        didSet {
+            if let maximumSelectedDates, maximumSelectedDates < 1 {
+                self.maximumSelectedDates = nil
+                return
+            }
+            enforceMaximumSelectionCount()
+        }
+    }
+
     public var adjustsBoundingRectWhenChangingMonths = false
 
     public var pagingEnabled = true {
         didSet {
             collectionView.isPagingEnabled = pagingEnabled
-            collectionViewLayout.invalidateLayout()
+            collectionViewLayout.invalidateDataSourceMetrics()
             setNeedsLayout()
         }
     }
@@ -137,6 +161,28 @@ open class TFYSwiftCalendar: UIView {
         selectedDateValues.values.sorted()
     }
 
+    /// The earliest and latest selected days, or `nil` when no date is selected.
+    public var selectedDateBounds: ClosedRange<Date>? {
+        guard let first = selectedDates.first, let last = selectedDates.last else { return nil }
+        return first...last
+    }
+
+    /// Unique dates represented by cells that are currently on screen.
+    public var visibleDates: [Date] {
+        var values: [TFYSwiftCalendarDayKey: Date] = [:]
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard let date = item(at: indexPath)?.date else { continue }
+            values[dayKey(for: date)] = math.startOfDay(for: date)
+        }
+        return values.values.sorted()
+    }
+
+    public var visibleDateRange: ClosedRange<Date>? {
+        let dates = visibleDates
+        guard let first = dates.first, let last = dates.last else { return nil }
+        return first...last
+    }
+
     public var visibleCells: [TFYSwiftCalendarCell] {
         collectionView.visibleCells.compactMap { $0 as? TFYSwiftCalendarCell }
     }
@@ -147,14 +193,17 @@ open class TFYSwiftCalendar: UIView {
 
     private static let defaultCellIdentifier = "TFYSwiftCalendarCell"
     private static let blankCellIdentifier = "TFYSwiftCalendarBlankCell"
+    private static let maximumCachedPageCount = 48
 
     private var configuredMinimumDate = Date(timeIntervalSince1970: 0)
     private var configuredMaximumDate = Date(timeIntervalSince1970: 4_102_444_799)
     private var usesDefaultDateRange = true
     private var selectedDateValues: [TFYSwiftCalendarDayKey: Date] = [:]
     private var pageCache: [Int: [TFYSwiftCalendarGridItem]] = [:]
+    internal var cachedPageCount: Int { pageCache.count }
     private var lastLaidOutSize = CGSize.zero
     private var isApplyingCalendarConfiguration = false
+    private var isCalendarReady = false
     private var lastSwipeSelectedKey: TFYSwiftCalendarDayKey?
     private var requestedCellIndexPath: IndexPath?
 
@@ -174,12 +223,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     private var rowsOnCurrentPage: Int {
-        switch scope {
-        case .week:
-            return 1
-        case .month:
-            return max(1, Int(ceil(Double(items(for: pageIndex(for: currentPage)).count) / 7.0)))
-        }
+        numberOfRows(in: pageIndex(for: currentPage))
     }
 
     public override init(frame: CGRect) {
@@ -199,9 +243,13 @@ open class TFYSwiftCalendar: UIView {
         clipsToBounds = true
         isAccessibilityElement = false
 
-        calendar.locale = locale
-        calendar.timeZone = timeZone
-        calendar.firstWeekday = firstWeekday
+        isApplyingCalendarConfiguration = true
+        var configuredCalendar = calendar
+        configuredCalendar.locale = locale
+        configuredCalendar.timeZone = timeZone
+        configuredCalendar.firstWeekday = Self.normalizedFirstWeekday(firstWeekday)
+        calendar = configuredCalendar
+        isApplyingCalendarConfiguration = false
         applyDefaultDateRangeIfNeeded()
 
         collectionView.backgroundColor = .clear
@@ -211,6 +259,9 @@ open class TFYSwiftCalendar: UIView {
         collectionView.showsVerticalScrollIndicator = false
         collectionView.isPagingEnabled = pagingEnabled
         collectionViewLayout.continuousRowHeight = rowHeight
+        collectionViewLayout.rowCountProvider = { [weak self] section in
+            self?.numberOfRows(in: section) ?? 1
+        }
         collectionView.allowsMultipleSelection = true
         collectionView.register(TFYSwiftCalendarCell.self, forCellWithReuseIdentifier: Self.defaultCellIdentifier)
         collectionView.register(TFYSwiftCalendarBlankCell.self, forCellWithReuseIdentifier: Self.blankCellIdentifier)
@@ -238,6 +289,7 @@ open class TFYSwiftCalendar: UIView {
 
         accessibilityDateFormatter.dateStyle = .full
         accessibilityDateFormatter.timeStyle = .none
+        isCalendarReady = true
         reloadData()
     }
 
@@ -275,12 +327,15 @@ open class TFYSwiftCalendar: UIView {
         minimumDate = normalizedLower
         maximumDate = normalizedUpper
         currentPage = clampedDate(currentPage)
-        selectedDateValues = selectedDateValues.filter { key, _ in
+        selectedDateValues = Dictionary(
+            selectedDateValues.values.map { (dayKey(for: $0), math.startOfDay(for: $0)) },
+            uniquingKeysWith: { _, latest in latest }
+        ).filter { key, _ in
             key >= dayKey(for: minimumDate) && key <= dayKey(for: maximumDate)
         }
         pageCache.removeAll(keepingCapacity: true)
         collectionView.reloadData()
-        collectionViewLayout.invalidateLayout()
+        collectionViewLayout.invalidateDataSourceMetrics()
         invalidateIntrinsicContentSize()
         updateChrome()
         setNeedsLayout()
@@ -300,7 +355,7 @@ open class TFYSwiftCalendar: UIView {
         currentPage = clampedDate(currentPage)
         pageCache.removeAll(keepingCapacity: true)
         collectionView.reloadData()
-        collectionViewLayout.invalidateLayout()
+        collectionViewLayout.invalidateDataSourceMetrics()
         invalidateIntrinsicContentSize()
         let targetBounds = CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: preferredHeight)
         delegate?.calendar(self, boundingRectWillChange: targetBounds, animated: animated)
@@ -345,26 +400,8 @@ open class TFYSwiftCalendar: UIView {
     }
 
     public func selectDate(_ date: Date?, scrollToDate: Bool = true) {
-        guard allowsSelection, let date else { return }
-        let normalized = math.startOfDay(for: date)
-        guard contains(normalized) else { return }
-        let position = monthPosition(for: normalized, relativeTo: canonicalPageDate(for: normalized))
-        guard delegate?.calendar(self, shouldSelect: normalized, at: position) ?? true else { return }
-
-        let key = dayKey(for: normalized)
-        if selectedDateValues[key] != nil { return }
-        if !allowsMultipleSelection {
-            removeAllSelections(except: nil, notifyDelegate: true)
-        }
-        selectedDateValues[key] = normalized
-        refreshDates(around: normalized)
-        if scrollToDate { setCurrentPage(normalized, animated: true) }
-        if let indexPath = indexPath(for: normalized) {
-            collectionView.selectItem(at: indexPath, animated: false, scrollPosition: [])
-            (collectionView.cellForItem(at: indexPath) as? TFYSwiftCalendarCell)?.animateSelection()
-        }
-        UIAccessibility.post(notification: .announcement, argument: accessibilityDateFormatter.string(from: normalized))
-        delegate?.calendar(self, didSelect: normalized, at: position)
+        guard let date else { return }
+        selectDates([date], replacingCurrentSelection: !allowsMultipleSelection, scrollToLastDate: scrollToDate)
     }
 
     public func deselectDate(_ date: Date) {
@@ -394,24 +431,121 @@ open class TFYSwiftCalendar: UIView {
         let lower = math.startOfDay(for: min(startDate, endDate))
         let upper = math.startOfDay(for: max(startDate, endDate))
         guard contains(lower), contains(upper) else { return }
-        if replacingCurrentSelection { deselectAllDates() }
         let previousMultipleSelection = allowsMultipleSelection
         allowsMultipleSelection = true
+        var dates: [Date] = []
+        dates.reserveCapacity(max(1, (calendar.dateComponents([.day], from: lower, to: upper).day ?? 0) + 1))
         var date = lower
         while dayKey(for: date) <= dayKey(for: upper) {
-            selectDate(date, scrollToDate: false)
+            dates.append(date)
             let next = math.addingDays(1, to: date)
             guard next > date else { break }
             date = next
         }
+        selectDates(
+            dates,
+            replacingCurrentSelection: replacingCurrentSelection,
+            scrollToLastDate: scrollToLastDate
+        )
         allowsMultipleSelection = previousMultipleSelection || lower != upper
-        if scrollToLastDate { setCurrentPage(upper, animated: true) }
+    }
+
+    /// Selects multiple days with a single display refresh.
+    public func selectDates(
+        _ dates: [Date],
+        replacingCurrentSelection: Bool = false,
+        scrollToLastDate: Bool = false
+    ) {
+        guard allowsSelection else { return }
+
+        var uniqueDates: [TFYSwiftCalendarDayKey: Date] = [:]
+        for date in dates {
+            let normalized = math.startOfDay(for: date)
+            guard contains(normalized) else { continue }
+            uniqueDates[dayKey(for: normalized)] = normalized
+        }
+        var candidates = uniqueDates.values.sorted()
+        if !allowsMultipleSelection, let last = candidates.last {
+            candidates = [last]
+        }
+        if candidates.isEmpty {
+            if dates.isEmpty, replacingCurrentSelection {
+                removeAllSelections(except: nil, notifyDelegate: true)
+            }
+            return
+        }
+
+        let candidateKeys = Set(candidates.map(dayKey(for:)))
+        if replacingCurrentSelection, candidateKeys == Set(selectedDateValues.keys) { return }
+        if !allowsMultipleSelection,
+           candidateKeys.count == 1,
+           candidateKeys == Set(selectedDateValues.keys) { return }
+
+        let preservedDates = replacingCurrentSelection
+            ? candidates.filter { selectedDateValues[dayKey(for: $0)] != nil }
+            : []
+        var accepted = candidates.filter { date in
+            let key = dayKey(for: date)
+            guard selectedDateValues[key] == nil else { return false }
+            let position = monthPosition(for: date, relativeTo: canonicalPageDate(for: date))
+            return delegate?.calendar(self, shouldSelect: date, at: position) ?? true
+        }
+        if let maximumSelectedDates {
+            let retainedCount = replacingCurrentSelection ? preservedDates.count : selectedDateValues.count
+            let available = max(0, maximumSelectedDates - retainedCount)
+            if accepted.count > available {
+                accepted = Array(accepted.prefix(available))
+                delegate?.calendar(self, didReachMaximumSelectionCount: maximumSelectedDates)
+            }
+        }
+
+        if replacingCurrentSelection {
+            let finalKeys = Set((preservedDates + accepted).map(dayKey(for:)))
+            guard !finalKeys.isEmpty else { return }
+            let removals = selectedDates.filter { !finalKeys.contains(dayKey(for: $0)) }
+            removeSelections(removals, notifyDelegate: true)
+        } else if !allowsMultipleSelection, !accepted.isEmpty {
+            removeAllSelections(except: nil, notifyDelegate: true)
+        }
+        guard !accepted.isEmpty else { return }
+
+        for date in accepted { selectedDateValues[dayKey(for: date)] = date }
+        refreshDates(around: accepted)
+        for path in indexPaths(for: accepted, visibleOnly: true) {
+            collectionView.selectItem(at: path, animated: false, scrollPosition: [])
+        }
+        if let last = accepted.last {
+            if scrollToLastDate { setCurrentPage(last, animated: true) }
+            if accepted.count == 1, let path = indexPath(for: last) {
+                (collectionView.cellForItem(at: path) as? TFYSwiftCalendarCell)?.animateSelection()
+            }
+        }
+        for date in accepted {
+            let position = monthPosition(for: date, relativeTo: canonicalPageDate(for: date))
+            delegate?.calendar(self, didSelect: date, at: position)
+        }
+
+        let announcement: String
+        if accepted.count == 1, let date = accepted.first {
+            announcement = accessibilityDateFormatter.string(from: date)
+        } else {
+            let format = TFYSwiftCalendarLocalization.string(
+                "%ld dates selected",
+                comment: "Calendar selection announcement"
+            )
+            announcement = String.localizedStringWithFormat(format, accepted.count)
+        }
+        UIAccessibility.post(notification: .announcement, argument: announcement)
     }
 
     public func reloadDates(_ dates: [Date]) {
-        let paths = Set(dates.compactMap(indexPath(for:)))
+        let paths = indexPaths(for: dates, visibleOnly: false)
         guard !paths.isEmpty else { return }
         collectionView.reloadItems(at: Array(paths))
+    }
+
+    public func isDateSelected(_ date: Date) -> Bool {
+        selectedDateValues[dayKey(for: date)] != nil
     }
 
     public func date(at point: CGPoint) -> Date? {
@@ -421,6 +555,14 @@ open class TFYSwiftCalendar: UIView {
     }
 
     public func register(_ cellClass: AnyClass?, forCellReuseIdentifier identifier: String) {
+        precondition(!identifier.isEmpty, "A calendar cell reuse identifier cannot be empty.")
+        collectionView.register(cellClass, forCellWithReuseIdentifier: identifier)
+    }
+
+    public func register(
+        _ cellClass: TFYSwiftCalendarCell.Type,
+        forCellReuseIdentifier identifier: String
+    ) {
         precondition(!identifier.isEmpty, "A calendar cell reuse identifier cannot be empty.")
         collectionView.register(cellClass, forCellWithReuseIdentifier: identifier)
     }
@@ -444,6 +586,15 @@ open class TFYSwiftCalendar: UIView {
         return collectionView.cellForItem(at: indexPath) as? TFYSwiftCalendarCell
     }
 
+    /// Returns the visible occurrence of a day, including adjacent-month placeholders.
+    public func cell(
+        for date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarCell? {
+        guard let indexPath = indexPath(for: date, at: monthPosition) else { return nil }
+        return collectionView.cellForItem(at: indexPath) as? TFYSwiftCalendarCell
+    }
+
     public func date(for cell: TFYSwiftCalendarCell) -> Date? {
         cell.representedDate
     }
@@ -454,6 +605,15 @@ open class TFYSwiftCalendar: UIView {
 
     public func frame(for date: Date) -> CGRect? {
         guard let indexPath = indexPath(for: date),
+              let attributes = collectionViewLayout.layoutAttributesForItem(at: indexPath) else { return nil }
+        return collectionView.convert(attributes.frame, to: self)
+    }
+
+    public func frame(
+        for date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> CGRect? {
+        guard let indexPath = indexPath(for: date, at: monthPosition),
               let attributes = collectionViewLayout.layoutAttributesForItem(at: indexPath) else { return nil }
         return collectionView.convert(attributes.frame, to: self)
     }
@@ -496,13 +656,24 @@ open class TFYSwiftCalendar: UIView {
         selectDate(date, scrollToDate: false)
     }
 
-    private func normalizeCalendarConfiguration() {
+    private static func normalizedFirstWeekday(_ value: Int) -> Int {
+        max(1, min(7, value))
+    }
+
+    private func updateCalendarConfiguration(_ update: (inout Calendar) -> Void) {
         guard !isApplyingCalendarConfiguration else { return }
         isApplyingCalendarConfiguration = true
-        calendar.locale = locale
-        calendar.timeZone = timeZone
-        calendar.firstWeekday = max(1, min(7, firstWeekday))
+        var configuredCalendar = calendar
+        update(&configuredCalendar)
+        calendar = configuredCalendar
         isApplyingCalendarConfiguration = false
+        calendarConfigurationDidChange()
+    }
+
+    private func calendarConfigurationDidChange() {
+        guard isCalendarReady else { return }
+        applyDefaultDateRangeIfNeeded()
+        reloadData()
     }
 
     private func applyDefaultDateRangeIfNeeded() {
@@ -548,7 +719,24 @@ open class TFYSwiftCalendar: UIView {
         let date = math.pageDate(at: section, scope: scope, startingAt: minimumDate)
         let result = math.gridItems(for: date, scope: scope, placeholderType: placeholderType)
         pageCache[section] = result
+        trimPageCache(around: section)
         return result
+    }
+
+    private func numberOfRows(in section: Int) -> Int {
+        guard section >= 0 else { return 1 }
+        if scope == .week { return 1 }
+        let date = math.pageDate(at: section, scope: scope, startingAt: minimumDate)
+        return math.numberOfRows(inMonthContaining: date, placeholderType: placeholderType)
+    }
+
+    private func trimPageCache(around centerSection: Int) {
+        guard pageCache.count > Self.maximumCachedPageCount else { return }
+        let excess = pageCache.count - Self.maximumCachedPageCount
+        let keysToRemove = pageCache.keys
+            .sorted { abs($0 - centerSection) > abs($1 - centerSection) }
+            .prefix(excess)
+        for key in keysToRemove { pageCache.removeValue(forKey: key) }
     }
 
     private func item(at indexPath: IndexPath) -> TFYSwiftCalendarGridItem? {
@@ -564,6 +752,33 @@ open class TFYSwiftCalendar: UIView {
         let key = dayKey(for: normalized)
         guard let item = items(for: section).firstIndex(where: { value in
             value.date.map { dayKey(for: $0) == key } ?? false
+        }) else { return nil }
+        return IndexPath(item: item, section: section)
+    }
+
+    private func indexPath(
+        for date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> IndexPath? {
+        let normalized = math.startOfDay(for: date)
+        if scope == .week {
+            guard monthPosition == .current else { return nil }
+            return indexPath(for: normalized)
+        }
+
+        let dateSection = math.monthOffset(of: normalized, from: minimumDate)
+        let section: Int
+        switch monthPosition {
+        case .current: section = dateSection
+        case .previous: section = dateSection + 1
+        case .next: section = dateSection - 1
+        case .notFound: return nil
+        }
+        guard section >= 0, section < numberOfPages else { return nil }
+        let key = dayKey(for: normalized)
+        guard let item = items(for: section).firstIndex(where: { value in
+            value.monthPosition == monthPosition
+                && (value.date.map { dayKey(for: $0) == key } ?? false)
         }) else { return nil }
         return IndexPath(item: item, section: section)
     }
@@ -649,26 +864,64 @@ open class TFYSwiftCalendar: UIView {
     }
 
     private func refreshDates(around date: Date) {
-        let candidates = [math.addingDays(-1, to: date), date, math.addingDays(1, to: date)]
-        let paths = Set(candidates.compactMap(indexPath(for:)))
-        let visible = paths.filter { collectionView.indexPathsForVisibleItems.contains($0) }
-        if !visible.isEmpty { collectionView.reloadItems(at: Array(visible)) }
+        refreshDates(around: [date])
+    }
+
+    private func refreshDates(around dates: [Date]) {
+        var candidates: [Date] = []
+        candidates.reserveCapacity(dates.count * 3)
+        for date in dates {
+            candidates.append(math.addingDays(-1, to: date))
+            candidates.append(date)
+            candidates.append(math.addingDays(1, to: date))
+        }
+        let paths = indexPaths(for: candidates, visibleOnly: true)
+        if !paths.isEmpty { collectionView.reloadItems(at: Array(paths)) }
+    }
+
+    private func indexPaths(for dates: [Date], visibleOnly: Bool) -> Set<IndexPath> {
+        let keys = Set(dates.map(dayKey(for:)))
+        var paths = Set<IndexPath>()
+        if !visibleOnly {
+            for date in dates {
+                if let path = indexPath(for: date) { paths.insert(path) }
+            }
+        }
+        for path in collectionView.indexPathsForVisibleItems {
+            guard let date = item(at: path)?.date, keys.contains(dayKey(for: date)) else { continue }
+            paths.insert(path)
+        }
+        return paths
     }
 
     private func removeAllSelections(except preservedDate: Date?, notifyDelegate: Bool) {
         let preservedKey = preservedDate.map(dayKey(for:))
-        let removals = selectedDateValues.filter { $0.key != preservedKey }
-        for (key, date) in removals {
-            selectedDateValues.removeValue(forKey: key)
-            if let indexPath = indexPath(for: date) {
-                collectionView.deselectItem(at: indexPath, animated: false)
-            }
+        let dates = selectedDateValues
+            .filter { $0.key != preservedKey }
+            .map(\.value)
+            .sorted()
+        removeSelections(dates, notifyDelegate: notifyDelegate)
+    }
+
+    private func removeSelections(_ dates: [Date], notifyDelegate: Bool) {
+        guard !dates.isEmpty else { return }
+        for date in dates {
+            selectedDateValues.removeValue(forKey: dayKey(for: date))
             if notifyDelegate {
                 let position = monthPosition(for: date, relativeTo: canonicalPageDate(for: date))
                 delegate?.calendar(self, didDeselect: date, at: position)
             }
-            refreshDates(around: date)
         }
+        for path in indexPaths(for: dates, visibleOnly: false) {
+            collectionView.deselectItem(at: path, animated: false)
+        }
+        refreshDates(around: dates)
+    }
+
+    private func enforceMaximumSelectionCount() {
+        guard let maximumSelectedDates, selectedDateValues.count > maximumSelectedDates else { return }
+        let datesToRemove = Array(selectedDates.dropFirst(maximumSelectedDates))
+        removeSelections(datesToRemove, notifyDelegate: true)
     }
 
     private func selectionPosition(for date: Date, style: TFYSwiftCalendarDayStyle) -> TFYSwiftCalendarSelectionPosition {
@@ -757,6 +1010,12 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
     ) -> Bool {
         guard allowsSelection, let gridItem = item(at: indexPath), let date = gridItem.date, contains(date) else { return false }
         if selectedDateValues[dayKey(for: date)] != nil { return false }
+        if allowsMultipleSelection,
+           let maximumSelectedDates,
+           selectedDateValues.count >= maximumSelectedDates {
+            delegate?.calendar(self, didReachMaximumSelectionCount: maximumSelectedDates)
+            return false
+        }
         return delegate?.calendar(self, shouldSelect: date, at: gridItem.monthPosition) ?? true
     }
 

@@ -39,6 +39,19 @@ public struct TFYSwiftCalendarMath: Sendable {
         calendar.range(of: .day, in: .month, for: date)?.count ?? 30
     }
 
+    /// Returns the number of visible rows needed to render the month.
+    public func numberOfRows(
+        inMonthContaining date: Date,
+        placeholderType: TFYSwiftCalendarPlaceholderType
+    ) -> Int {
+        if placeholderType == .fillSixRows { return 6 }
+        let month = startOfMonth(for: date)
+        let weekday = calendar.component(.weekday, from: month)
+        let leading = (weekday - calendar.firstWeekday + 7) % 7
+        let requiredItems = leading + numberOfDays(inMonthContaining: month)
+        return max(1, Int(ceil(Double(requiredItems) / 7.0)))
+    }
+
     public func numberOfMonths(from start: Date, through end: Date) -> Int {
         let lower = startOfMonth(for: start)
         let upper = startOfMonth(for: end)
@@ -111,14 +124,7 @@ public struct TFYSwiftCalendarMath: Sendable {
         let weekday = calendar.component(.weekday, from: month)
         let leading = (weekday - calendar.firstWeekday + 7) % 7
         let days = numberOfDays(inMonthContaining: month)
-        let required = leading + days
-        let total: Int
-        switch placeholderType {
-        case .fillSixRows:
-            total = 42
-        case .fillHeadTail, .none:
-            total = max(7, Int(ceil(Double(required) / 7.0)) * 7)
-        }
+        let total = numberOfRows(inMonthContaining: month, placeholderType: placeholderType) * 7
 
         return (0..<total).map { item in
             let dayOffset = item - leading

@@ -18,7 +18,10 @@ let package = Package(
         .target(
             name: "TFYSwiftCalendarkit",
             path: "Sources/TFYSwiftCalendarkit",
-            resources: [.copy("PrivacyInfo.xcprivacy")]
+            resources: [
+                .copy("PrivacyInfo.xcprivacy"),
+                .process("Resources")
+            ]
         ),
         .testTarget(
             name: "TFYSwiftCalendarkitTests",

@@ -64,6 +64,21 @@ final class TFYSwiftCalendarMathTests: XCTestCase {
         XCTAssertEqual(math.gridItems(for: month, scope: .month, placeholderType: .fillSixRows).count, 42)
     }
 
+    func testRowCountMatchesGeneratedGrid() {
+        let calendar = makeCalendar(firstWeekday: 2)
+        let math = TFYSwiftCalendarMath(calendar: calendar)
+        let months = (1...12).map { makeDate(2024, $0, 1, calendar: calendar) }
+
+        for month in months {
+            let expected = math.gridItems(for: month, scope: .month, placeholderType: .fillHeadTail).count / 7
+            XCTAssertEqual(
+                math.numberOfRows(inMonthContaining: month, placeholderType: .fillHeadTail),
+                expected
+            )
+            XCTAssertEqual(math.numberOfRows(inMonthContaining: month, placeholderType: .fillSixRows), 6)
+        }
+    }
+
     func testWeekGridUsesConfiguredFirstWeekday() {
         let calendar = makeCalendar(firstWeekday: 2)
         let math = TFYSwiftCalendarMath(calendar: calendar)

@@ -1,8 +1,8 @@
 Pod::Spec.new do |spec|
   spec.name = 'TFYSwiftCalendarkit'
-  spec.version = '1.0.0'
+  spec.version = '1.1.0'
   spec.summary = 'A type-safe, pure Swift calendar view for iOS.'
-  spec.description = 'Month and week calendar UI with custom cells, events, range selection, UIKit, and SwiftUI support.'
+  spec.description = 'Production-ready month and week calendar UI with custom cells, events, bounded range selection, continuous scrolling, accessibility, UIKit, and SwiftUI support.'
   spec.homepage = 'https://github.com/13662049573/TFYSwiftCalendarkit'
   spec.license = { :type => 'MIT', :file => 'LICENSE' }
   spec.author = { 'Tianfeng You' => '420144542@qq.com' }
@@ -11,7 +11,10 @@ Pod::Spec.new do |spec|
   spec.swift_versions = ['6.0']
   spec.source_files = 'Sources/TFYSwiftCalendarkit/**/*.swift'
   spec.resource_bundles = {
-    'TFYSwiftCalendarkit_Privacy' => ['Sources/TFYSwiftCalendarkit/PrivacyInfo.xcprivacy']
+    'TFYSwiftCalendarkit_Resources' => [
+      'Sources/TFYSwiftCalendarkit/PrivacyInfo.xcprivacy',
+      'Sources/TFYSwiftCalendarkit/Resources/**/*'
+    ]
   }
   spec.frameworks = 'Foundation', 'UIKit', 'SwiftUI'
 end

@@ -74,7 +74,7 @@ public struct TFYSwiftCalendarCellState: OptionSet, Sendable {
 }
 
 public enum TFYSwiftCalendarDefaults {
-    public static let headerHeight: CGFloat = 40
+    public static let headerHeight: CGFloat = 44
     public static let weekdayHeight: CGFloat = 25
     public static let rowHeight: CGFloat = 38
     public static let maximumNumberOfEvents = 3

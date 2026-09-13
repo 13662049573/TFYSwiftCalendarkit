@@ -348,13 +348,18 @@ private struct SwiftUICalendarDemo: View {
                 configure: { calendar in
                     calendar.applyDemoDefaults()
                     calendar.allowsMultipleSelection = true
+                    calendar.maximumSelectedDates = 5
                     calendar.appearance.selectionColor = .systemIndigo
                 }
             )
-            .frame(height: scope == .month ? 293 : 103)
+            .frame(height: scope == .month ? 297 : 107)
             .clipShape(RoundedRectangle(cornerRadius: 16))
 
-            Text(selectedDates.isEmpty ? "选择一个或多个日期" : "已选择 \(selectedDates.count) 天")
+            Text(
+                selectedDates.isEmpty
+                    ? "最多选择 5 个日期"
+                    : "已选择 \(selectedDates.count) 天，还可选择 \(max(0, 5 - selectedDates.count)) 天"
+            )
                 .font(.body)
                 .foregroundStyle(.secondary)
             Spacer()

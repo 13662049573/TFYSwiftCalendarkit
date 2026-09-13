@@ -27,12 +27,22 @@ public final class TFYSwiftCalendarHeaderView: UIView {
         titleLabel.maximumContentSizeCategory = .extraExtraExtraLarge
         titleLabel.minimumScaleFactor = 0.7
         titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.isAccessibilityElement = true
+        titleLabel.accessibilityTraits = .header
 
         let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
         previousButton.setImage(UIImage(systemName: "chevron.left", withConfiguration: symbolConfiguration), for: .normal)
         nextButton.setImage(UIImage(systemName: "chevron.right", withConfiguration: symbolConfiguration), for: .normal)
-        previousButton.accessibilityLabel = NSLocalizedString("Previous page", comment: "Calendar previous page")
-        nextButton.accessibilityLabel = NSLocalizedString("Next page", comment: "Calendar next page")
+        previousButton.accessibilityLabel = TFYSwiftCalendarLocalization.string(
+            "Previous page",
+            comment: "Calendar previous page"
+        )
+        nextButton.accessibilityLabel = TFYSwiftCalendarLocalization.string(
+            "Next page",
+            comment: "Calendar next page"
+        )
+        previousButton.accessibilityIdentifier = "TFYSwiftCalendar.previousPage"
+        nextButton.accessibilityIdentifier = "TFYSwiftCalendar.nextPage"
         previousButton.addTarget(self, action: #selector(previousTapped), for: .touchUpInside)
         nextButton.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
 
@@ -66,6 +76,7 @@ public final class TFYSwiftCalendarHeaderView: UIView {
             text = text.uppercased(with: locale)
         }
         titleLabel.text = text
+        titleLabel.accessibilityLabel = text
         titleLabel.font = appearance.headerTitleFont
         titleLabel.textColor = appearance.headerTitleColor
         previousButton.tintColor = appearance.headerTitleColor

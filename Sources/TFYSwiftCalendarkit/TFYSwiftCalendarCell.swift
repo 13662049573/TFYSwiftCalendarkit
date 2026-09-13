@@ -68,6 +68,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         topImageView.image = nil
         eventIndicator.colors = []
         accessibilityLabel = nil
+        accessibilityValue = nil
         accessibilityHint = nil
         transform = .identity
         alpha = 1
@@ -139,9 +140,9 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         let border = selected
             ? (appliedStyle.selectionBorderColor ?? appearance.borderColor(for: cellState))
             : (appliedStyle.borderColor ?? appearance.borderColor(for: cellState))
-        shapeLayer.fillColor = fill.cgColor
-        shapeLayer.strokeColor = border.cgColor
-        rowSeparatorLayer.backgroundColor = appearance.separatorColor.cgColor
+        shapeLayer.fillColor = fill.resolvedColor(with: traitCollection).cgColor
+        shapeLayer.strokeColor = border.resolvedColor(with: traitCollection).cgColor
+        rowSeparatorLayer.backgroundColor = appearance.separatorColor.resolvedColor(with: traitCollection).cgColor
         rowSeparatorLayer.isHidden = appearance.separatorStyle == .none
 
         let customEvents = selected ? appliedStyle.selectionEventColors : appliedStyle.eventColors
@@ -176,13 +177,42 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         imageView.image = content.image
         topImageView.image = content.topImage
         eventIndicator.colors = Array(content.eventColors.prefix(TFYSwiftCalendarDefaults.maximumNumberOfEvents))
-        accessibilityLabel = content.accessibilityLabel ?? defaultAccessibilityLabel
+        let descriptiveText = [defaultAccessibilityLabel, content.topSubtitle, content.subtitle]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        accessibilityLabel = content.accessibilityLabel ?? descriptiveText
         accessibilityHint = content.accessibilityHint
-        accessibilityTraits = state.contains(.selected) ? [.button, .selected] : .button
+        var traits: UIAccessibilityTraits = .button
+        if state.contains(.selected) { traits.insert(.selected) }
+        if state.contains(.disabled) { traits.insert(.notEnabled) }
+        accessibilityTraits = traits
+        var values: [String] = []
+        if state.contains(.today) {
+            values.append(TFYSwiftCalendarLocalization.string("Today", comment: "Calendar cell accessibility value"))
+        }
+        if state.contains(.selected) {
+            values.append(TFYSwiftCalendarLocalization.string("Selected", comment: "Calendar cell accessibility value"))
+        }
+        if state.contains(.disabled) {
+            values.append(TFYSwiftCalendarLocalization.string("Unavailable", comment: "Calendar cell accessibility value"))
+        }
+        if !content.eventColors.isEmpty {
+            let format = TFYSwiftCalendarLocalization.string(
+                "%ld events",
+                comment: "Calendar cell accessibility event count"
+            )
+            values.append(String.localizedStringWithFormat(format, content.eventColors.count))
+        }
+        accessibilityValue = values.isEmpty ? nil : values.joined(separator: ", ")
         configureAppearance()
     }
 
     internal func animateSelection() {
+        guard !UIAccessibility.isReduceMotionEnabled else {
+            transform = .identity
+            return
+        }
         transform = CGAffineTransform(scaleX: 0.88, y: 0.88)
         UIView.animate(
             withDuration: 0.22,
@@ -192,6 +222,13 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
             options: [.allowUserInteraction, .beginFromCurrentState]
         ) {
             self.transform = .identity
+        }
+    }
+
+    open override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        if previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? true {
+            configureAppearance()
         }
     }
 

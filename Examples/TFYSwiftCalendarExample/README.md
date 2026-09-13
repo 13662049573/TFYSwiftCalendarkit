@@ -14,4 +14,4 @@ The menu contains runnable, pure-Swift examples for:
 - Programmatic `loadView` construction and day images
 - Month/week scope transitions coordinated with a table view
 - Custom calendar cells with four-quadrant tags
-- SwiftUI binding and `UIViewRepresentable` integration
+- SwiftUI binding, maximum-selection limits, and `UIViewRepresentable` integration

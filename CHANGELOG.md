@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.0
+
+- Added batch selection, maximum-selection limits, selected/visible date queries, and explicit adjacent-month cell/frame lookup.
+- Reworked continuous vertical layout to calculate rows without constructing every page, use binary section lookup, keep sticky headers correct while scrolling, and support right-to-left layout.
+- Bounded the page cache and reused event indicator layers to reduce memory churn in large date ranges.
+- Removed cascading calendar-configuration reloads and preserved selections when locale, time zone, or calendar settings change.
+- Prevented SwiftUI binding feedback during view updates and replaced quadratic selection synchronization with one batched update.
+- Improved Dynamic Type, VoiceOver state descriptions, disabled-date traits, reduced-motion behavior, 44-point header controls, and dynamic-color layer updates.
+- Added packaged English and Simplified Chinese accessibility strings for Swift Package Manager and CocoaPods.
+- Expanded regression coverage and added automated package/example build checks.
+
 ## 1.0.0
 
 - Reimplemented the calendar in pure Swift 6.

@@ -9,6 +9,7 @@
 - Configurable first weekday, locale, calendar, and time zone
 - None, head/tail, and fixed six-row placeholder modes
 - Single, multiple, swipe, and linked-range selection
+- Batched selection, optional selection limits, visible-date queries, and adjacent-month cell lookup
 - Custom cells and per-day content/styles
 - Subtitles, top subtitles, images, lunar labels, and event dots
 - Dynamic Type, VoiceOver labels, and Dark Mode colors
@@ -28,7 +29,7 @@ https://github.com/13662049573/TFYSwiftCalendarkit.git
 Or add it to `Package.swift`:
 
 ```swift
-.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "1.0.0")
+.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "1.1.0")
 ```
 
 Then add `TFYSwiftCalendarkit` to the app target.
@@ -77,6 +78,19 @@ For a contiguous selection:
 calendarView.selectDates(from: startDate, through: endDate)
 ```
 
+For efficient non-contiguous selection and a booking-style limit:
+
+```swift
+calendarView.allowsMultipleSelection = true
+calendarView.maximumSelectedDates = 5
+calendarView.selectDates(dates, replacingCurrentSelection: true)
+```
+
+Implement `calendar(_:didReachMaximumSelectionCount:)` to show a limit message. Use
+`selectedDateBounds`, `visibleDates`, `visibleDateRange`, and `isDateSelected(_:)` for state queries.
+When the same day appears as an adjacent-month placeholder, use `cell(for:at:)` or `frame(for:at:)`
+to address that exact occurrence.
+
 For a scope transition:
 
 ```swift
@@ -115,7 +129,7 @@ struct ContentView: View {
             calendar.locale = Locale(identifier: "zh_CN")
             calendar.allowsMultipleSelection = true
         }
-        .frame(height: scope == .month ? 293 : 103)
+        .frame(height: scope == .month ? 297 : 107)
     }
 }
 ```
@@ -126,7 +140,13 @@ struct ContentView: View {
 - Open the repository folder in Xcode to edit the Swift Package.
 - Run `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,name=iPhone 17' test` for the test suite.
 
-See [MIGRATION.md](MIGRATION.md) for Objective-C API mapping and behavior changes.
+The test suite covers civil-date boundaries, daylight-saving transitions, placeholder safety,
+selection batching and limits, large continuous ranges, layout joins, accessibility configuration,
+custom cells, and event-layer reuse. Continuous mode computes row geometry without materializing
+every month and the internal page cache is bounded.
+
+See [MIGRATION.md](MIGRATION.md) for Objective-C API mapping and behavior changes, and
+[CONTRIBUTING.md](CONTRIBUTING.md) for release-quality checks.
 
 ## Requirements
 

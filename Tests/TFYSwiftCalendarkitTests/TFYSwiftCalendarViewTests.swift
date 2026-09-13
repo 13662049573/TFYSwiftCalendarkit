@@ -36,8 +36,25 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
 
     func testOutOfRangeDateIsRejectedWithoutCrashing() {
         let view = makeCalendarView()
+        let selected = date(2024, 5, 5)
+        view.selectDate(selected, scrollToDate: false)
         view.selectDate(date(2030, 1, 1), scrollToDate: false)
-        XCTAssertTrue(view.selectedDates.isEmpty)
+        XCTAssertEqual(view.selectedDates.count, 1)
+        XCTAssertTrue(view.isDateSelected(selected))
+    }
+
+    func testRejectedSingleSelectionPreservesCurrentDate() {
+        let view = makeCalendarView()
+        let selected = date(2024, 5, 5)
+        view.selectDate(selected, scrollToDate: false)
+        let spy = DelegateSpy()
+        spy.allowsSelection = false
+        view.delegate = spy
+
+        view.selectDate(date(2024, 5, 6), scrollToDate: false)
+
+        XCTAssertEqual(view.selectedDates.count, 1)
+        XCTAssertTrue(view.isDateSelected(selected))
     }
 
     func testDefaultRangeUsesCivilDatesInConfiguredTimeZone() {
@@ -106,6 +123,8 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
 
     func testRangeSelectionCreatesAContiguousSet() {
         let view = makeCalendarView()
+        let spy = DelegateSpy()
+        view.delegate = spy
         view.selectDates(
             from: date(2024, 5, 5),
             through: date(2024, 5, 9),
@@ -113,6 +132,61 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
             scrollToLastDate: false
         )
         XCTAssertEqual(view.selectedDates.count, 5)
+        XCTAssertEqual(spy.selectedDates.count, 5)
+        XCTAssertEqual(view.selectedDateBounds?.lowerBound, view.selectedDates.first)
+        XCTAssertEqual(view.selectedDateBounds?.upperBound, view.selectedDates.last)
+        XCTAssertTrue(view.isDateSelected(date(2024, 5, 7)))
+    }
+
+    func testBatchSelectionReplacesExistingDatesInOneOperation() {
+        let view = makeCalendarView()
+        view.allowsMultipleSelection = true
+        view.selectDate(date(2024, 4, 1), scrollToDate: false)
+
+        view.selectDates(
+            [date(2024, 5, 2), date(2024, 5, 3), date(2024, 5, 3)],
+            replacingCurrentSelection: true
+        )
+
+        XCTAssertEqual(view.selectedDates.count, 2)
+        XCTAssertFalse(view.isDateSelected(date(2024, 4, 1)))
+        XCTAssertTrue(view.isDateSelected(date(2024, 5, 2)))
+        XCTAssertTrue(view.isDateSelected(date(2024, 5, 3)))
+    }
+
+    func testReplacingBatchRetainsDatesAlreadyInRequestedSelection() {
+        let view = makeCalendarView()
+        view.allowsMultipleSelection = true
+        let retained = date(2024, 5, 1)
+        view.selectDate(retained, scrollToDate: false)
+
+        view.selectDates(
+            [retained, date(2024, 5, 2)],
+            replacingCurrentSelection: true
+        )
+
+        XCTAssertEqual(view.selectedDates.count, 2)
+        XCTAssertTrue(view.isDateSelected(retained))
+        XCTAssertTrue(view.isDateSelected(date(2024, 5, 2)))
+    }
+
+    func testMaximumSelectionCountCapsBatchAndTrimsExistingSelection() {
+        let view = makeCalendarView()
+        let spy = DelegateSpy()
+        view.delegate = spy
+        view.allowsMultipleSelection = true
+        view.maximumSelectedDates = 2
+
+        view.selectDates(
+            [date(2024, 5, 1), date(2024, 5, 2), date(2024, 5, 3)],
+            replacingCurrentSelection: true
+        )
+
+        XCTAssertEqual(view.selectedDates.count, 2)
+        XCTAssertEqual(spy.reachedSelectionLimits, [2])
+
+        view.maximumSelectedDates = 1
+        XCTAssertEqual(view.selectedDates.count, 1)
     }
 
     func testEmptyEventColorArrayIsSafe() {
@@ -120,6 +194,22 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         indicator.colors = []
         indicator.layoutIfNeeded()
         XCTAssertTrue(indicator.layer.sublayers?.isEmpty ?? true)
+    }
+
+    func testEventIndicatorReusesLayersAcrossLayouts() {
+        let indicator = TFYSwiftCalendarEventIndicator(frame: CGRect(x: 0, y: 0, width: 80, height: 8))
+        indicator.colors = [.systemRed, .systemBlue, .systemGreen]
+        indicator.layoutIfNeeded()
+        let initialLayers = indicator.layer.sublayers ?? []
+
+        indicator.frame.size.width = 120
+        indicator.setNeedsLayout()
+        indicator.layoutIfNeeded()
+        let updatedLayers = indicator.layer.sublayers ?? []
+
+        XCTAssertEqual(initialLayers.count, 3)
+        XCTAssertEqual(updatedLayers.count, 3)
+        XCTAssertTrue(zip(initialLayers, updatedLayers).allSatisfy { $0 === $1 })
     }
 
     func testChineseSingleCharacterWeekdaysRemainDistinct() {
@@ -189,6 +279,43 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(view.collectionView.contentOffset.y, 688, accuracy: 0.1)
     }
 
+    func testLargeContinuousRangeDoesNotMaterializeEveryPage() {
+        let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        view.calendar = systemCalendar
+        view.pagingEnabled = false
+        view.scrollDirection = .vertical
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        XCTAssertLessThanOrEqual(view.cachedPageCount, 48)
+        XCTAssertGreaterThan(view.collectionView.numberOfSections, 1_000)
+    }
+
+    func testCalendarConfigurationReloadsDataSourceOnce() {
+        let view = makeCalendarView()
+        let source = CountingDataSource()
+        view.dataSource = source
+
+        view.locale = Locale(identifier: "zh_CN")
+
+        XCTAssertEqual(source.minimumRequestCount, 1)
+        XCTAssertEqual(source.maximumRequestCount, 1)
+        XCTAssertEqual(view.calendar.locale?.identifier, "zh_CN")
+    }
+
+    func testPlaceholderOccurrenceCanBeQueriedExplicitly() {
+        let view = makeCalendarView()
+        view.setCurrentPage(date(2024, 6, 1), animated: false)
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        let placeholder = view.cell(for: date(2024, 5, 31), at: .previous)
+
+        XCTAssertNotNil(placeholder)
+        XCTAssertEqual(placeholder?.monthPosition, .previous)
+        XCTAssertNotNil(view.frame(for: date(2024, 5, 31), at: .previous))
+    }
+
     func testCustomCellsCanBeDequeuedForBoundaryPlaceholders() {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
         view.calendar = systemCalendar
@@ -222,9 +349,32 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
 @MainActor
 private final class DelegateSpy: TFYSwiftCalendarDelegate {
     var boundingRectChanges: [CGRect] = []
+    var selectedDates: [Date] = []
+    var reachedSelectionLimits: [Int] = []
+    var allowsSelection = true
+
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        shouldSelect date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> Bool {
+        allowsSelection
+    }
 
     func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {
         boundingRectChanges.append(bounds)
+    }
+
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        didSelect date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) {
+        selectedDates.append(date)
+    }
+
+    func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int) {
+        reachedSelectionLimits.append(maximum)
     }
 }
 
@@ -260,5 +410,21 @@ private final class CustomCellDataSource: TFYSwiftCalendarDataSource {
     ) -> TFYSwiftCalendarCell? {
         dequeuedCellCount += 1
         return calendar.dequeueReusableCell(withIdentifier: "custom", for: date, at: monthPosition)
+    }
+}
+
+@MainActor
+private final class CountingDataSource: TFYSwiftCalendarDataSource {
+    var minimumRequestCount = 0
+    var maximumRequestCount = 0
+
+    func minimumDate(for calendar: TFYSwiftCalendar) -> Date? {
+        minimumRequestCount += 1
+        return nil
+    }
+
+    func maximumDate(for calendar: TFYSwiftCalendar) -> Date? {
+        maximumRequestCount += 1
+        return nil
     }
 }

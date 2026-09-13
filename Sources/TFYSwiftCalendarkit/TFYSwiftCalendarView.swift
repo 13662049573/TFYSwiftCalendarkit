@@ -35,12 +35,12 @@ public struct TFYSwiftCalendarView: UIViewRepresentable {
         configure(calendar)
         calendar.dataSource = context.coordinator
         calendar.delegate = context.coordinator
-        synchronizeSelections(in: calendar)
-        if let page = currentPage?.wrappedValue {
-            calendar.setCurrentPage(page, animated: false)
-        }
         if let scope = scope?.wrappedValue {
             calendar.setScope(scope, animated: false)
+        }
+        synchronizeSelections(in: calendar, coordinator: context.coordinator)
+        if let page = currentPage?.wrappedValue {
+            calendar.setCurrentPage(page, animated: false)
         }
         return calendar
     }
@@ -50,32 +50,32 @@ public struct TFYSwiftCalendarView: UIViewRepresentable {
         configure(calendar)
         calendar.dataSource = context.coordinator
         calendar.delegate = context.coordinator
-        synchronizeSelections(in: calendar)
+        context.coordinator.isSynchronizingFromSwiftUI = true
+        defer { context.coordinator.isSynchronizingFromSwiftUI = false }
+        if let requestedScope = scope?.wrappedValue, calendar.scope != requestedScope {
+            calendar.setScope(requestedScope, animated: true)
+        }
+        synchronizeSelections(in: calendar, coordinator: context.coordinator)
         if let page = currentPage?.wrappedValue,
            calendar.calendar.compare(page, to: calendar.currentPage, toGranularity: calendar.scope == .month ? .month : .weekOfYear) != .orderedSame {
             calendar.setCurrentPage(page, animated: true)
         }
-        if let requestedScope = scope?.wrappedValue, calendar.scope != requestedScope {
-            calendar.setScope(requestedScope, animated: true)
-        }
         calendar.invalidateAppearance()
     }
 
-    private func synchronizeSelections(in calendar: TFYSwiftCalendar) {
+    private func synchronizeSelections(in calendar: TFYSwiftCalendar, coordinator: Coordinator) {
+        let wasSynchronizing = coordinator.isSynchronizingFromSwiftUI
+        coordinator.isSynchronizingFromSwiftUI = true
+        defer { coordinator.isSynchronizingFromSwiftUI = wasSynchronizing }
         let requested = selectedDates.map { calendar.calendar.startOfDay(for: $0) }
-        let existing = calendar.selectedDates.map { calendar.calendar.startOfDay(for: $0) }
-        for date in existing where !requested.contains(where: { calendar.calendar.isDate($0, inSameDayAs: date) }) {
-            calendar.deselectDate(date)
-        }
         if requested.count > 1 { calendar.allowsMultipleSelection = true }
-        for date in requested where !existing.contains(where: { calendar.calendar.isDate($0, inSameDayAs: date) }) {
-            calendar.selectDate(date, scrollToDate: false)
-        }
+        calendar.selectDates(requested, replacingCurrentSelection: true, scrollToLastDate: false)
     }
 
     @MainActor
     public final class Coordinator: NSObject, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate {
         fileprivate var parent: TFYSwiftCalendarView
+        fileprivate var isSynchronizingFromSwiftUI = false
 
         fileprivate init(parent: TFYSwiftCalendarView) {
             self.parent = parent
@@ -94,6 +94,7 @@ public struct TFYSwiftCalendarView: UIViewRepresentable {
             didSelect date: Date,
             at monthPosition: TFYSwiftCalendarMonthPosition
         ) {
+            guard !isSynchronizingFromSwiftUI else { return }
             parent.selectedDates = calendar.selectedDates
         }
 
@@ -102,14 +103,17 @@ public struct TFYSwiftCalendarView: UIViewRepresentable {
             didDeselect date: Date,
             at monthPosition: TFYSwiftCalendarMonthPosition
         ) {
+            guard !isSynchronizingFromSwiftUI else { return }
             parent.selectedDates = calendar.selectedDates
         }
 
         public func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar) {
+            guard !isSynchronizingFromSwiftUI else { return }
             parent.currentPage?.wrappedValue = calendar.currentPage
         }
 
         public func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {
+            guard !isSynchronizingFromSwiftUI else { return }
             parent.scope?.wrappedValue = calendar.scope
         }
     }
