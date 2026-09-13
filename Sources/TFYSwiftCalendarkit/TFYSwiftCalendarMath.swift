@@ -40,6 +40,7 @@ public struct TFYSwiftCalendarMath: Sendable {
     }
 
     /// Returns the number of visible rows needed to render the month.
+    /// 返回渲染指定月份所需的可见行数。
     public func numberOfRows(
         inMonthContaining date: Date,
         placeholderType: TFYSwiftCalendarPlaceholderType

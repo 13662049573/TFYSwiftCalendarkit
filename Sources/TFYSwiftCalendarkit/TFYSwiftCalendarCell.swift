@@ -58,6 +58,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
 
     open override func prepareForReuse() {
         super.prepareForReuse()
+        // 复用前清除未结束的选中缩放与图层动画，防止动画状态被带到新的日期 Cell。
         layer.removeAllAnimations()
         contentView.layer.removeAllAnimations()
         shapeLayer.removeAllAnimations()

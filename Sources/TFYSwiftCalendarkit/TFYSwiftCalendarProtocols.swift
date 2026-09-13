@@ -6,6 +6,7 @@ public protocol TFYSwiftCalendarDataSource: AnyObject {
     func maximumDate(for calendar: TFYSwiftCalendar) -> Date?
     func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent
     /// Supplies content with a position that remains stable while adjacent pages are preloaded.
+    /// 提供日期内容及其稳定的月份位置；相邻页面预加载时应优先使用此回调，避免依赖 `currentPage` 导致标签闪现或缺失。
     func calendar(
         _ calendar: TFYSwiftCalendar,
         contentFor date: Date,
@@ -66,6 +67,7 @@ public protocol TFYSwiftCalendarDelegate: AnyObject {
     func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int)
     func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle?
     /// Supplies a style with a position that remains stable while adjacent pages are preloaded.
+    /// 提供日期样式及其稳定的月份位置；可通过 `monthPosition` 区分本月日期和前后月占位日期。
     func calendar(
         _ calendar: TFYSwiftCalendar,
         styleFor date: Date,

@@ -19,6 +19,7 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
     }
 
     /// Supplies row counts without asking the collection view to materialize every page.
+    /// 按需提供每个分区的行数，避免集合视图提前创建全部月份页面，降低长日期范围的内存开销。
     internal var rowCountProvider: ((Int) -> Int)? {
         didSet { invalidateMetrics() }
     }

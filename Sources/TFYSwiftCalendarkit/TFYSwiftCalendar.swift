@@ -15,6 +15,7 @@ open class TFYSwiftCalendar: UIView {
 
     /// Enables the built-in vertical pan that collapses month scope to week scope and expands it back.
     /// Disabled by default so ordinary scrolling cannot change scope unexpectedly.
+    /// 是否允许通过纵向拖动在月视图与周视图之间切换。默认关闭，避免普通滚动误触发周期切换。
     public var allowsScopeGesture: Bool {
         get { scopeGestureRecognizer.isEnabled }
         set { scopeGestureRecognizer.isEnabled = newValue }
@@ -99,6 +100,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// Optional upper bound for multi-date selection. `nil` means unlimited.
+    /// 多选日期数量上限；`nil` 表示不限制。
     public var maximumSelectedDates: Int? {
         didSet {
             if let maximumSelectedDates, maximumSelectedDates < 1 {
@@ -139,6 +141,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// Height of the sticky month header used by vertical, non-paging calendars. Set to `0` to hide it.
+    /// 纵向连续滚动模式中的吸顶月份标题高度；设置为 `0` 可隐藏标题。
     public var continuousSectionHeaderHeight: CGFloat = 0 {
         didSet {
             collectionViewLayout.continuousSectionHeaderHeight = max(0, continuousSectionHeaderHeight)
@@ -169,12 +172,14 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// The earliest and latest selected days, or `nil` when no date is selected.
+    /// 已选日期中的最早和最晚日期；没有选中日期时返回 `nil`。
     public var selectedDateBounds: ClosedRange<Date>? {
         guard let first = selectedDates.first, let last = selectedDates.last else { return nil }
         return first...last
     }
 
     /// Unique dates represented by cells that are currently on screen.
+    /// 当前屏幕上所有日期 Cell 对应的去重日期集合。
     public var visibleDates: [Date] {
         var values: [TFYSwiftCalendarDayKey: Date] = [:]
         for indexPath in collectionView.indexPathsForVisibleItems {
@@ -358,6 +363,8 @@ open class TFYSwiftCalendar: UIView {
 
     /// Reconfigures currently visible dates in place without dequeuing cells or flashing selection state.
     /// Use this after the data source's content changes without changing the configured date range.
+    /// 原地重新配置当前可见日期，不重新出队 Cell，也不会触发选中态闪烁。
+    /// 当数据源内容发生变化但日期范围未改变时调用此方法。
     public func reloadVisibleDates() {
         let paths = collectionView.indexPathsForVisibleItems
         guard !paths.isEmpty else { return }
@@ -467,6 +474,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// Selects multiple days with a single display refresh.
+    /// 批量选择多个日期，并在一次显示刷新中完成界面更新。
     public func selectDates(
         _ dates: [Date],
         replacingCurrentSelection: Bool = false,
@@ -555,6 +563,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// Reconfigures visible occurrences of the supplied dates without recreating their cells.
+    /// 原地刷新指定日期当前可见的所有实例，包括相邻月份中的占位实例，不会重新创建 Cell。
     public func reloadDates(_ dates: [Date]) {
         reconfigureVisibleCells(at: indexPaths(for: dates, visibleOnly: true))
     }
@@ -602,6 +611,7 @@ open class TFYSwiftCalendar: UIView {
     }
 
     /// Returns the visible occurrence of a day, including adjacent-month placeholders.
+    /// 返回指定日期当前可见的 Cell，也支持查询相邻月份中的占位日期实例。
     public func cell(
         for date: Date,
         at monthPosition: TFYSwiftCalendarMonthPosition
@@ -846,6 +856,7 @@ open class TFYSwiftCalendar: UIView {
         }
         currentPage = newPage
         updateChrome()
+        // 页码落定后原地重配可见 Cell，确保依赖 currentPage 的旧版数据源也能立即补齐标签和样式。
         reloadVisibleDates()
         invalidateIntrinsicContentSize()
         if adjustsBoundingRectWhenChangingMonths {
@@ -895,6 +906,7 @@ open class TFYSwiftCalendar: UIView {
 
     private func reconfigureVisibleCells(at paths: Set<IndexPath>) {
         guard !paths.isEmpty else { return }
+        // 同时关闭 Core Animation 隐式动画和 UIView 动画，避免内容更新、描边和选中状态在复用时闪烁。
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         UIView.performWithoutAnimation {

@@ -41,9 +41,13 @@ public enum TFYSwiftCalendarFillType: Int, CaseIterable, Sendable {
 ///
 /// The rounded value is expressed as a ratio from `0` (square) to `1` (circle).
 /// Values outside that range are clamped when the style is created.
+/// 定义单个日期填充或描边区域的形状。圆角值使用 `0...1` 的比例，超出范围时会自动截断。
 public enum TFYSwiftCalendarDayShape: Sendable, Equatable {
+    /// 圆形。
     case circle
+    /// 自定义圆角，`0` 等同方形，`1` 等同圆形。
     case rounded(cornerRadiusRatio: CGFloat)
+    /// 直角方形。
     case square
 
     fileprivate var cornerRadiusRatio: CGFloat {
@@ -166,6 +170,14 @@ public struct TFYSwiftCalendarDayStyle {
     public init() {}
 
     /// Creates an independently filled day style with a configurable outline shape.
+    /// 创建具有独立填充和可配置描边形状的日期样式。
+    /// - Parameters:
+    ///   - shape: 日期外形，可选择圆形、自定义圆角或方形。
+    ///   - borderColor: 普通状态的描边颜色。
+    ///   - borderWidth: 描边宽度；负数会按 `0` 处理。
+    ///   - fillColor: 普通状态的填充颜色。
+    ///   - selectionFillColor: 选中状态填充颜色；为 `nil` 时使用日历全局选中颜色。
+    ///   - selectionBorderColor: 选中状态描边颜色；为 `nil` 时沿用 `borderColor`。
     public static func bordered(
         shape: TFYSwiftCalendarDayShape = .circle,
         borderColor: UIColor,
@@ -190,6 +202,7 @@ public struct TFYSwiftCalendarDayStyle {
     ///
     /// The selected state keeps the same outline width and uses the calendar's
     /// selection fill unless `selectionFillColor` is supplied.
+    /// 创建带独立圆形描边的日期样式；未指定选中填充色时使用日历全局选中颜色。
     public static func circularBorder(
         borderColor: UIColor,
         borderWidth: CGFloat = 2,
@@ -208,6 +221,7 @@ public struct TFYSwiftCalendarDayStyle {
     }
 
     /// Creates a separate square date style with a visible outline.
+    /// 创建带独立方形描边的日期样式。
     public static func squareBorder(
         borderColor: UIColor,
         borderWidth: CGFloat = 2,

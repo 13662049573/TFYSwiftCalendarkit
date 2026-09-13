@@ -26,15 +26,19 @@ public final class TFYSwiftCalendarAppearance {
 
     /// Optional weekday symbols in Foundation weekday order: Sunday through Saturday.
     /// Values are automatically reordered to match `firstWeekday`.
+    /// 可选的星期标题，数组顺序遵循 Foundation：星期日到星期六；内部会根据 `firstWeekday` 自动重排。
     public var weekdaySymbols: [String]?
 
     /// Optional VoiceOver weekday names in Foundation weekday order: Sunday through Saturday.
+    /// 可选的 VoiceOver 星期名称，数组顺序为星期日到星期六。
     public var weekdayAccessibilitySymbols: [String]?
 
     /// Optional per-weekday text colors in Foundation weekday order: Sunday through Saturday.
+    /// 可选的逐星期文字颜色，数组顺序为星期日到星期六。
     public var weekdayTextColors: [UIColor]?
 
     /// Optional per-weekday backgrounds in Foundation weekday order: Sunday through Saturday.
+    /// 可选的逐星期背景颜色，数组顺序为星期日到星期六。
     public var weekdayLabelBackgroundColors: [UIColor]?
 
     public var weekdayContentInsets = UIEdgeInsets.zero
@@ -68,6 +72,7 @@ public final class TFYSwiftCalendarAppearance {
     public var separatorColor = UIColor.separator.withAlphaComponent(0.45)
 
     /// `0` is a rectangle and `1` is the largest possible corner radius.
+    /// 日期背景的圆角比例：`0` 表示直角矩形，`1` 表示最大圆角（正方形日期区域中即为圆形）。
     public var borderRadius: CGFloat = 1
     public var horizontalTitleInset: CGFloat = 0
     public var fillType: TFYSwiftCalendarFillType = .separate
