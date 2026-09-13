@@ -37,6 +37,27 @@ public enum TFYSwiftCalendarFillType: Int, CaseIterable, Sendable {
     case linked
 }
 
+/// Defines the geometry used by an independently filled or outlined day.
+///
+/// The rounded value is expressed as a ratio from `0` (square) to `1` (circle).
+/// Values outside that range are clamped when the style is created.
+public enum TFYSwiftCalendarDayShape: Sendable, Equatable {
+    case circle
+    case rounded(cornerRadiusRatio: CGFloat)
+    case square
+
+    fileprivate var cornerRadiusRatio: CGFloat {
+        switch self {
+        case .circle:
+            return 1
+        case let .rounded(cornerRadiusRatio):
+            return min(1, max(0, cornerRadiusRatio))
+        case .square:
+            return 0
+        }
+    }
+}
+
 public enum TFYSwiftCalendarSelectionAnimation: Int, CaseIterable, Sendable {
     case none
     case scale
@@ -144,6 +165,27 @@ public struct TFYSwiftCalendarDayStyle {
 
     public init() {}
 
+    /// Creates an independently filled day style with a configurable outline shape.
+    public static func bordered(
+        shape: TFYSwiftCalendarDayShape = .circle,
+        borderColor: UIColor,
+        borderWidth: CGFloat = 2,
+        fillColor: UIColor = .clear,
+        selectionFillColor: UIColor? = nil,
+        selectionBorderColor: UIColor? = nil
+    ) -> Self {
+        var style = Self()
+        style.fillType = .separate
+        style.borderRadius = shape.cornerRadiusRatio
+        style.fillColor = fillColor
+        style.selectionFillColor = selectionFillColor
+        style.borderColor = borderColor
+        style.selectionBorderColor = selectionBorderColor ?? borderColor
+        style.borderWidth = max(0, borderWidth)
+        style.selectionBorderWidth = max(0, borderWidth)
+        return style
+    }
+
     /// Creates a separate, fully rounded date style with a visible outline.
     ///
     /// The selected state keeps the same outline width and uses the calendar's
@@ -155,16 +197,32 @@ public struct TFYSwiftCalendarDayStyle {
         selectionFillColor: UIColor? = nil,
         selectionBorderColor: UIColor? = nil
     ) -> Self {
-        var style = Self()
-        style.fillType = .separate
-        style.borderRadius = 1
-        style.fillColor = fillColor
-        style.selectionFillColor = selectionFillColor
-        style.borderColor = borderColor
-        style.selectionBorderColor = selectionBorderColor ?? borderColor
-        style.borderWidth = max(0, borderWidth)
-        style.selectionBorderWidth = max(0, borderWidth)
-        return style
+        bordered(
+            shape: .circle,
+            borderColor: borderColor,
+            borderWidth: borderWidth,
+            fillColor: fillColor,
+            selectionFillColor: selectionFillColor,
+            selectionBorderColor: selectionBorderColor
+        )
+    }
+
+    /// Creates a separate square date style with a visible outline.
+    public static func squareBorder(
+        borderColor: UIColor,
+        borderWidth: CGFloat = 2,
+        fillColor: UIColor = .clear,
+        selectionFillColor: UIColor? = nil,
+        selectionBorderColor: UIColor? = nil
+    ) -> Self {
+        bordered(
+            shape: .square,
+            borderColor: borderColor,
+            borderWidth: borderWidth,
+            fillColor: fillColor,
+            selectionFillColor: selectionFillColor,
+            selectionBorderColor: selectionBorderColor
+        )
     }
 }
 

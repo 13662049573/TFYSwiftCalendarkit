@@ -72,12 +72,14 @@ extension CalendarViewController: TFYSwiftCalendarDataSource {
 }
 ```
 
-Use the built-in circular-outline factory when an individual date needs a clear,
-independent border. Border widths can also be configured globally through the appearance object.
+Use the built-in bordered-style factory when an individual date needs a clear,
+independent outline. It supports circles, proportional rounded corners, and squares;
+border widths can also be configured globally through the appearance object.
 
 ```swift
 func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? {
-    .circularBorder(
+    .bordered(
+        shape: .rounded(cornerRadiusRatio: 0.35), // .circle or .square
         borderColor: .systemIndigo,
         borderWidth: 2,
         selectionFillColor: .systemIndigo
@@ -86,6 +88,24 @@ func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCale
 
 calendarView.appearance.borderWidth = 1
 calendarView.appearance.selectionBorderWidth = 2
+```
+
+For content or styles that should only appear in the owning month, use the
+position-aware callbacks. Unlike `currentPage`, `monthPosition` stays correct while
+the next or previous page is being prepared during an interactive swipe.
+
+```swift
+func calendar(
+    _ calendar: TFYSwiftCalendar,
+    contentFor date: Date,
+    at monthPosition: TFYSwiftCalendarMonthPosition
+) -> TFYSwiftCalendarDayContent {
+    guard monthPosition == .current else { return .init() }
+    return .init(subtitle: "提醒")
+}
+
+// Refresh changed visible content without reloading or recreating cells.
+calendarView.reloadDates(changedDates)
 ```
 
 The weekday bar supports custom symbols, VoiceOver names, per-day text/background colors,

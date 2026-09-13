@@ -242,6 +242,9 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
     private let calendarCard = UIView()
     private let legendCard = UIView()
     private let selectionLabel = UILabel()
+    private let shapeControl = UISegmentedControl(items: ["圆形", "圆角", "方形"])
+    private let outlineLegendIcon = UIView()
+    private var outlineShape: TFYSwiftCalendarDayShape = .circle
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -321,8 +324,12 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         ])
     }
 
-    func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
-        guard calendar.calendar.isDate(date, equalTo: calendar.currentPage, toGranularity: .month) else {
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        contentFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayContent {
+        guard monthPosition == .current else {
             return TFYSwiftCalendarDayContent()
         }
         let day = calendar.calendar.component(.day, from: date)
@@ -344,8 +351,12 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         )
     }
 
-    func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? {
-        guard calendar.calendar.isDate(date, equalTo: calendar.currentPage, toGranularity: .month) else { return nil }
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        styleFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayStyle? {
+        guard monthPosition == .current else { return nil }
         let day = calendar.calendar.component(.day, from: date)
         var style = TFYSwiftCalendarDayStyle()
         var customized = false
@@ -361,7 +372,8 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         if let index = [4, 11, 18, 25].firstIndex(of: day) {
             let palette: [UIColor] = [.systemIndigo, .systemTeal, .systemOrange, .systemPink]
             let color = palette[index]
-            style = .circularBorder(
+            style = .bordered(
+                shape: outlineShape,
                 borderColor: color,
                 borderWidth: 2,
                 selectionFillColor: color
@@ -382,14 +394,13 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         }
 
         if calendar.calendar.isDateInToday(date) {
-            style.fillType = .separate
-            style.borderRadius = 1
-            style.fillColor = UIColor.systemOrange.withAlphaComponent(0.10)
-            style.borderColor = .systemOrange
-            style.borderWidth = 2
-            style.selectionFillColor = .systemOrange
-            style.selectionBorderColor = .systemOrange
-            style.selectionBorderWidth = 2
+            style = .bordered(
+                shape: outlineShape,
+                borderColor: .systemOrange,
+                borderWidth: 2,
+                fillColor: UIColor.systemOrange.withAlphaComponent(0.10),
+                selectionFillColor: .systemOrange
+            )
             customized = true
         }
 
@@ -401,11 +412,11 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         didSelect date: Date,
         at monthPosition: TFYSwiftCalendarMonthPosition
     ) {
-        selectionLabel.text = "已选择 " + DemoDate.text(date, format: "M月d日 EEEE") + " · 圆形选中态"
+        updateSelectionSummary(for: date)
     }
 
     func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar) {
-        selectShowcaseDate()
+        updateSelectionSummary(for: calendar.selectedDates.last)
     }
 
     private func configureLegend() {
@@ -420,17 +431,25 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         selectionLabel.numberOfLines = 0
         selectionLabel.text = "点击日期可查看圆形选中态"
 
+        shapeControl.selectedSegmentIndex = 0
+        shapeControl.selectedSegmentTintColor = UIColor.systemIndigo.withAlphaComponent(0.16)
+        shapeControl.addTarget(self, action: #selector(outlineShapeChanged), for: .valueChanged)
+        shapeControl.accessibilityLabel = "日期描边形状"
+
+        let shapeSelector = makeShapeSelector()
         let stack = UIStackView(arrangedSubviews: [
             titleLabel,
             selectionLabel,
+            shapeSelector,
             makeLegendRow(symbol: "circle.fill", color: .systemPurple, title: "柔和填充", detail: "低对比背景，不抢占日期信息"),
-            makeLegendRow(symbol: "circle", color: .systemIndigo, title: "圆形描边", detail: "支持逐日颜色与 2pt 独立线宽", outlined: true),
+            makeLegendRow(symbol: "circle", color: .systemIndigo, title: "可配置描边", detail: "圆形、圆角或方形，颜色和线宽均可逐日设置", outlined: true),
             makeLegendRow(symbol: "ellipsis", color: .systemPink, title: "事件标记", detail: "最多三个语义色事件点"),
             makeLegendRow(symbol: "sparkles", color: .systemTeal, title: "图标与标签", detail: "错位展示，避免内容相互叠压")
         ])
         stack.axis = .vertical
         stack.spacing = 12
         stack.setCustomSpacing(16, after: selectionLabel)
+        stack.setCustomSpacing(16, after: shapeSelector)
         stack.translatesAutoresizingMaskIntoConstraints = false
         legendCard.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -441,6 +460,29 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         ])
     }
 
+    private func makeShapeSelector() -> UIView {
+        let titleLabel = UILabel()
+        titleLabel.font = .preferredFont(forTextStyle: .subheadline)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.text = "描边形状"
+
+        let detailLabel = UILabel()
+        detailLabel.font = .preferredFont(forTextStyle: .caption1)
+        detailLabel.adjustsFontForContentSizeCategory = true
+        detailLabel.textColor = .secondaryLabel
+        detailLabel.text = "即时切换，不重新创建日期 Cell"
+
+        let textStack = UIStackView(arrangedSubviews: [titleLabel, detailLabel])
+        textStack.axis = .vertical
+        textStack.spacing = 2
+        let row = UIStackView(arrangedSubviews: [textStack, shapeControl])
+        row.axis = .horizontal
+        row.alignment = .center
+        row.spacing = 12
+        shapeControl.setContentCompressionResistancePriority(.required, for: .horizontal)
+        return row
+    }
+
     private func makeLegendRow(
         symbol: String,
         color: UIColor,
@@ -448,9 +490,10 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         detail: String,
         outlined: Bool = false
     ) -> UIView {
-        let iconContainer = UIView()
+        let iconContainer = outlined ? outlineLegendIcon : UIView()
         iconContainer.backgroundColor = outlined ? .clear : color.withAlphaComponent(0.12)
-        iconContainer.layer.cornerRadius = 18
+        iconContainer.layer.cornerRadius = outlined ? outlineLegendCornerRadius : 18
+        iconContainer.layer.cornerCurve = .continuous
         iconContainer.layer.borderColor = color.cgColor
         iconContainer.layer.borderWidth = outlined ? 2 : 0
         iconContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -515,7 +558,42 @@ final class DelegateAppearanceViewController: UIViewController, TFYSwiftCalendar
         components.day = 11
         guard let date = calendarView.calendar.date(from: components) else { return }
         calendarView.selectDate(date, scrollToDate: false)
-        selectionLabel.text = "已选择 " + DemoDate.text(date, format: "M月d日 EEEE") + " · 圆形选中态"
+        updateSelectionSummary(for: date)
+    }
+
+    private var outlineShapeName: String {
+        switch outlineShape {
+        case .circle: return "圆形"
+        case .rounded: return "圆角"
+        case .square: return "方形"
+        }
+    }
+
+    private var outlineLegendCornerRadius: CGFloat {
+        switch outlineShape {
+        case .circle: return 18
+        case .rounded: return 7
+        case .square: return 0
+        }
+    }
+
+    private func updateSelectionSummary(for date: Date?) {
+        guard let date else {
+            selectionLabel.text = "未选择日期 · 当前为\(outlineShapeName)描边"
+            return
+        }
+        selectionLabel.text = "已选择 " + DemoDate.text(date, format: "M月d日 EEEE") + " · \(outlineShapeName)选中态"
+    }
+
+    @objc private func outlineShapeChanged() {
+        switch shapeControl.selectedSegmentIndex {
+        case 1: outlineShape = .rounded(cornerRadiusRatio: 0.34)
+        case 2: outlineShape = .square
+        default: outlineShape = .circle
+        }
+        calendarView.invalidateAppearance()
+        outlineLegendIcon.layer.cornerRadius = outlineLegendCornerRadius
+        updateSelectionSummary(for: calendarView.selectedDates.last)
     }
 
     @objc private func showToday() {

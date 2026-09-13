@@ -356,6 +356,14 @@ open class TFYSwiftCalendar: UIView {
         reloadVisibleDates()
     }
 
+    /// Reconfigures currently visible dates in place without dequeuing cells or flashing selection state.
+    /// Use this after the data source's content changes without changing the configured date range.
+    public func reloadVisibleDates() {
+        let paths = collectionView.indexPathsForVisibleItems
+        guard !paths.isEmpty else { return }
+        reconfigureVisibleCells(at: Set(paths))
+    }
+
     public func setScope(_ newScope: TFYSwiftCalendarScope, animated: Bool) {
         guard newScope != scope else { return }
         let oldHeight = preferredHeight
@@ -392,11 +400,13 @@ open class TFYSwiftCalendar: UIView {
         guard pageIndex(for: target) != pageIndex(for: currentPage) else {
             currentPage = canonicalPageDate(for: target)
             updateChrome()
+            reloadVisibleDates()
             return
         }
         currentPage = canonicalPageDate(for: target)
         scrollToPage(containing: currentPage, animated: animated)
         updateChrome()
+        if !animated { reloadVisibleDates() }
         if adjustsBoundingRectWhenChangingMonths {
             invalidateIntrinsicContentSize()
             let targetBounds = CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: preferredHeight)
@@ -544,13 +554,9 @@ open class TFYSwiftCalendar: UIView {
         UIAccessibility.post(notification: .announcement, argument: announcement)
     }
 
+    /// Reconfigures visible occurrences of the supplied dates without recreating their cells.
     public func reloadDates(_ dates: [Date]) {
-        let paths = indexPaths(for: dates, visibleOnly: false)
-        guard !paths.isEmpty else { return }
-        UIView.performWithoutAnimation {
-            collectionView.reloadItems(at: Array(paths))
-            collectionView.layoutIfNeeded()
-        }
+        reconfigureVisibleCells(at: indexPaths(for: dates, visibleOnly: true))
     }
 
     public func isDateSelected(_ date: Date) -> Bool {
@@ -833,9 +839,14 @@ open class TFYSwiftCalendar: UIView {
             section = min(max(0, Int(round(offset / length))), max(0, numberOfPages - 1))
         }
         let newPage = canonicalPageDate(for: math.pageDate(at: section, scope: scope, startingAt: minimumDate))
-        guard pageIndex(for: newPage) != pageIndex(for: currentPage) else { return }
+        let pageChanged = pageIndex(for: newPage) != pageIndex(for: currentPage)
+        guard pageChanged else {
+            reloadVisibleDates()
+            return
+        }
         currentPage = newPage
         updateChrome()
+        reloadVisibleDates()
         invalidateIntrinsicContentSize()
         if adjustsBoundingRectWhenChangingMonths {
             let targetBounds = CGRect(x: bounds.minX, y: bounds.minY, width: bounds.width, height: preferredHeight)
@@ -864,12 +875,6 @@ open class TFYSwiftCalendar: UIView {
         invalidateIntrinsicContentSize()
         setNeedsLayout()
         collectionViewLayout.invalidateLayout()
-    }
-
-    private func reloadVisibleDates() {
-        let paths = collectionView.indexPathsForVisibleItems
-        guard !paths.isEmpty else { return }
-        reconfigureVisibleCells(at: Set(paths))
     }
 
     private func refreshDates(around date: Date) {
@@ -1022,8 +1027,16 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
         if math.isWeekend(normalized) { state.insert(.weekend) }
         if selectedDateValues[dayKey(for: normalized)] != nil { state.insert(.selected) }
 
-        let content = dataSource?.calendar(self, contentFor: normalized) ?? TFYSwiftCalendarDayContent()
-        let style = delegate?.calendar(self, styleFor: normalized) ?? TFYSwiftCalendarDayStyle()
+        let content = dataSource?.calendar(
+            self,
+            contentFor: normalized,
+            at: gridItem.monthPosition
+        ) ?? TFYSwiftCalendarDayContent()
+        let style = delegate?.calendar(
+            self,
+            styleFor: normalized,
+            at: gridItem.monthPosition
+        ) ?? TFYSwiftCalendarDayStyle()
         cell.apply(
             date: normalized,
             monthPosition: gridItem.monthPosition,

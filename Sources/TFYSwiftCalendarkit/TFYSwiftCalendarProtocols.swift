@@ -5,6 +5,12 @@ public protocol TFYSwiftCalendarDataSource: AnyObject {
     func minimumDate(for calendar: TFYSwiftCalendar) -> Date?
     func maximumDate(for calendar: TFYSwiftCalendar) -> Date?
     func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent
+    /// Supplies content with a position that remains stable while adjacent pages are preloaded.
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        contentFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayContent
     func calendar(
         _ calendar: TFYSwiftCalendar,
         cellFor date: Date,
@@ -17,6 +23,13 @@ public extension TFYSwiftCalendarDataSource {
     func maximumDate(for calendar: TFYSwiftCalendar) -> Date? { nil }
     func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
         TFYSwiftCalendarDayContent()
+    }
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        contentFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayContent {
+        self.calendar(calendar, contentFor: date)
     }
     func calendar(
         _ calendar: TFYSwiftCalendar,
@@ -52,6 +65,12 @@ public protocol TFYSwiftCalendarDelegate: AnyObject {
     func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar)
     func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int)
     func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle?
+    /// Supplies a style with a position that remains stable while adjacent pages are preloaded.
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        styleFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayStyle?
 }
 
 public extension TFYSwiftCalendarDelegate {
@@ -84,4 +103,11 @@ public extension TFYSwiftCalendarDelegate {
     func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar) {}
     func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int) {}
     func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? { nil }
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        styleFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayStyle? {
+        self.calendar(calendar, styleFor: date)
+    }
 }

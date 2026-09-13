@@ -323,6 +323,69 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertTrue(style.borderColor?.isEqual(UIColor.systemIndigo) == true)
     }
 
+    func testBorderedFactorySupportsCircleRoundedAndSquareShapes() {
+        let circle = TFYSwiftCalendarDayStyle.bordered(
+            shape: .circle,
+            borderColor: .systemIndigo
+        )
+        let rounded = TFYSwiftCalendarDayStyle.bordered(
+            shape: .rounded(cornerRadiusRatio: 0.35),
+            borderColor: .systemTeal
+        )
+        let square = TFYSwiftCalendarDayStyle.squareBorder(
+            borderColor: .systemOrange,
+            borderWidth: -2
+        )
+
+        XCTAssertEqual(circle.borderRadius, 1)
+        XCTAssertEqual(rounded.borderRadius, 0.35)
+        XCTAssertEqual(square.borderRadius, 0)
+        XCTAssertEqual(square.borderWidth, 0)
+        XCTAssertEqual(square.selectionBorderWidth, 0)
+    }
+
+    func testCompletedPageChangeReconfiguresLegacyPageAwareContentInPlace() {
+        let view = makeCalendarView()
+        let source = CurrentPageAwareDataSource()
+        view.dataSource = source
+        view.reloadData()
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        let destinationDate = date(2024, 6, 6)
+        let destinationOffset = CGPoint(
+            x: view.collectionView.contentOffset.x + view.collectionView.bounds.width,
+            y: 0
+        )
+        view.collectionView.setContentOffset(destinationOffset, animated: false)
+        view.collectionView.layoutIfNeeded()
+        let cellBeforePageUpdate = view.cell(for: destinationDate)
+
+        XCTAssertNotNil(cellBeforePageUpdate)
+        XCTAssertNil(cellBeforePageUpdate?.subtitleLabel.text)
+
+        view.scrollViewDidEndDecelerating(view.collectionView)
+
+        let cellAfterPageUpdate = view.cell(for: destinationDate)
+        XCTAssertTrue(cellBeforePageUpdate === cellAfterPageUpdate)
+        XCTAssertEqual(cellAfterPageUpdate?.subtitleLabel.text, "Badge")
+        XCTAssertTrue(systemCalendar.isDate(view.currentPage, equalTo: destinationDate, toGranularity: .month))
+    }
+
+    func testPositionAwareContentReceivesStableGridPosition() {
+        let view = makeCalendarView()
+        let source = PositionAwareDataSource()
+        view.dataSource = source
+        view.reloadData()
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        XCTAssertEqual(view.cell(for: date(2024, 5, 6))?.subtitleLabel.text, "current")
+        XCTAssertNil(view.cell(for: date(2024, 4, 29), at: .previous)?.subtitleLabel.text)
+        XCTAssertTrue(source.receivedPositions.contains(.current))
+        XCTAssertTrue(source.receivedPositions.contains(.previous))
+    }
+
     func testPerDateBorderWidthIsAppliedToCellLayer() {
         let cell = TFYSwiftCalendarCell(frame: CGRect(x: 0, y: 0, width: 54, height: 54))
         let appearance = TFYSwiftCalendarAppearance()
@@ -348,6 +411,19 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(cell.shapeLayer.lineWidth, 3)
         let pathBounds = cell.shapeLayer.path?.boundingBox ?? .zero
         XCTAssertEqual(pathBounds.width, pathBounds.height, accuracy: 0.001)
+    }
+
+    func testPrepareForReuseRemovesPendingCellAndShapeAnimations() {
+        let cell = TFYSwiftCalendarCell()
+        let animation = CABasicAnimation(keyPath: "opacity")
+        animation.duration = 1
+        cell.layer.add(animation, forKey: "cell-fade")
+        cell.shapeLayer.add(animation, forKey: "shape-fade")
+
+        cell.prepareForReuse()
+
+        XCTAssertNil(cell.layer.animationKeys())
+        XCTAssertNil(cell.shapeLayer.animationKeys())
     }
 
     func testNonPagingVerticalLayoutUsesCompactContinuousSections() {
@@ -525,6 +601,33 @@ private final class DataSourceStub: TFYSwiftCalendarDataSource {
 
     func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
         TFYSwiftCalendarDayContent(subtitle: "Event")
+    }
+}
+
+@MainActor
+private final class CurrentPageAwareDataSource: TFYSwiftCalendarDataSource {
+    func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
+        guard calendar.calendar.isDate(date, equalTo: calendar.currentPage, toGranularity: .month),
+              calendar.calendar.component(.day, from: date) == 6 else {
+            return TFYSwiftCalendarDayContent()
+        }
+        return TFYSwiftCalendarDayContent(subtitle: "Badge")
+    }
+}
+
+@MainActor
+private final class PositionAwareDataSource: TFYSwiftCalendarDataSource {
+    var receivedPositions = Set<TFYSwiftCalendarMonthPosition>()
+
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        contentFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarDayContent {
+        receivedPositions.insert(monthPosition)
+        return TFYSwiftCalendarDayContent(
+            subtitle: monthPosition == .current ? "current" : nil
+        )
     }
 }
 

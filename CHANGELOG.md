@@ -18,6 +18,9 @@
 - Reserved independent date, subtitle, and centered event-dot slots to prevent event markers from drifting or overlapping text.
 - Made vertical month/week scope gestures opt-in and hardened the DIY demo's animated height transition.
 - Redesigned the complete overview demo with adaptive cards, a styled month/week control, clearer selection summaries, and uncluttered placeholders.
+- Added circle, proportional rounded-corner, and square per-date border shapes with an interactive appearance demo.
+- Added position-aware content/style callbacks so adjacent-page preloading cannot hide labels or styles during swipes.
+- Reconfigured visible dates in place after page changes and cleared recycled-cell animations to prevent paging and reuse flashes.
 
 ## 1.0.0
 

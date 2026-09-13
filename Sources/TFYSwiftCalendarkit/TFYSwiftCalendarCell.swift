@@ -58,6 +58,10 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
 
     open override func prepareForReuse() {
         super.prepareForReuse()
+        layer.removeAllAnimations()
+        contentView.layer.removeAllAnimations()
+        shapeLayer.removeAllAnimations()
+        rowSeparatorLayer.removeAllAnimations()
         representedDate = nil
         monthPosition = .notFound
         cellState = []
