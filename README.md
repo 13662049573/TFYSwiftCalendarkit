@@ -1,40 +1,50 @@
 # TFYSwiftCalendarkit
 
-`TFYSwiftCalendarkit` is a pure Swift calendar library for iOS 15 and later. It keeps the flexible UIKit model of TFY_Calendar while replacing Objective-C runtime forwarding, private KVC access, unsafe pointers, and fixed-second date arithmetic with type-safe Swift APIs.
+`TFYSwiftCalendarkit` 是一个支持 iOS 15 及以上版本的纯 Swift 日历组件。它保留了 TFY_Calendar 灵活的 UIKit 使用方式，同时以类型安全的 Swift API 替代 Objective-C 运行时消息转发、私有 KVC、非安全指针和固定秒数日期计算。
 
-## Features
+## 功能特性
 
-- Month and week scopes
-- Horizontal/vertical paging and compact continuous vertical scrolling
-- Configurable first weekday, locale, calendar, time zone, and weekday-bar styling
-- None, head/tail, and fixed six-row placeholder modes
-- Single, multiple, swipe, and linked-range selection
-- Batched selection, optional selection limits, visible-date queries, and adjacent-month cell lookup
-- Custom cells and per-day content/styles
-- Subtitles, top subtitles, images, lunar labels, and event dots
-- Dynamic Type, VoiceOver labels, and Dark Mode colors
-- UIKit API plus a SwiftUI `UIViewRepresentable`
-- No third-party runtime dependencies
+- 月视图与周视图
+- 水平或垂直分页，以及紧凑的连续垂直滚动
+- 可配置每周起始日、语言区域、日历、时区和星期栏样式
+- 不显示、首尾补齐和固定六行三种占位模式
+- 单选、多选、滑动选择和连续范围选择
+- 批量选择、可选的选择数量限制、可见日期查询和相邻月份单元格查询
+- 自定义单元格，以及按日期配置内容与样式
+- 副标题、顶部副标题、图片、农历文本和事件圆点
+- 支持动态字体、VoiceOver 和深色模式
+- 提供 UIKit API 和 SwiftUI `UIViewRepresentable` 封装
+- 无第三方运行时依赖
 
-## Installation
+## 安装
 
 ### Swift Package Manager
 
-In Xcode, select **File > Add Package Dependencies**, then use the repository URL after publishing this folder:
+在 Xcode 中选择 **File > Add Package Dependencies**，然后输入仓库地址：
 
 ```text
 https://github.com/13662049573/TFYSwiftCalendarkit.git
 ```
 
-Or add it to `Package.swift`:
+也可以在 `Package.swift` 中添加：
 
 ```swift
 .package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "1.1.0")
 ```
 
-Then add `TFYSwiftCalendarkit` to the app target.
+随后将 `TFYSwiftCalendarkit` 添加到应用 Target。
 
-## UIKit quick start
+### CocoaPods
+
+在 `Podfile` 中添加：
+
+```ruby
+pod 'TFYSwiftCalendarkit', '~> 1.1.0'
+```
+
+然后执行 `pod install`，并通过生成的 `.xcworkspace` 打开项目。
+
+## UIKit 快速开始
 
 ```swift
 import TFYSwiftCalendarkit
@@ -62,7 +72,7 @@ final class CalendarViewController: UIViewController {
 }
 ```
 
-Implement `TFYSwiftCalendarDataSource` to provide day content and `TFYSwiftCalendarDelegate` for selection and per-day style. Every protocol method has a default implementation, so only implement what is needed.
+实现 `TFYSwiftCalendarDataSource` 以提供日期内容，实现 `TFYSwiftCalendarDelegate` 以处理选择事件和按日期配置样式。所有协议方法都有默认实现，因此只需实现实际需要的方法。
 
 ```swift
 extension CalendarViewController: TFYSwiftCalendarDataSource {
@@ -72,14 +82,12 @@ extension CalendarViewController: TFYSwiftCalendarDataSource {
 }
 ```
 
-Use the built-in bordered-style factory when an individual date needs a clear,
-independent outline. It supports circles, proportional rounded corners, and squares;
-border widths can also be configured globally through the appearance object.
+当某个日期需要清晰且独立的边框时，可以使用内置的描边样式工厂。它支持圆形、按比例设置圆角和方形，也可以通过全局外观对象统一设置边框宽度。
 
 ```swift
 func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? {
     .bordered(
-        shape: .rounded(cornerRadiusRatio: 0.35), // .circle or .square
+        shape: .rounded(cornerRadiusRatio: 0.35), // 也可使用 .circle 或 .square
         borderColor: .systemIndigo,
         borderWidth: 2,
         selectionFillColor: .systemIndigo
@@ -90,9 +98,7 @@ calendarView.appearance.borderWidth = 1
 calendarView.appearance.selectionBorderWidth = 2
 ```
 
-For content or styles that should only appear in the owning month, use the
-position-aware callbacks. Unlike `currentPage`, `monthPosition` stays correct while
-the next or previous page is being prepared during an interactive swipe.
+如果内容或样式只应显示在日期所属月份，请使用带月份位置的回调。与 `currentPage` 不同，在交互式滑动期间预加载上一页或下一页时，`monthPosition` 仍能保持准确。
 
 ```swift
 func calendar(
@@ -104,13 +110,11 @@ func calendar(
     return .init(subtitle: "提醒")
 }
 
-// Refresh changed visible content without reloading or recreating cells.
+// 仅刷新发生变化的可见日期，不重新加载或创建单元格。
 calendarView.reloadDates(changedDates)
 ```
 
-The weekday bar supports custom symbols, VoiceOver names, per-day text/background colors,
-spacing, insets, borders, and rounded pill backgrounds. Arrays use Foundation weekday order
-(Sunday through Saturday) and are reordered automatically for `firstWeekday`.
+星期栏支持自定义显示文本、VoiceOver 名称、每日文字与背景颜色、间距、内边距、边框和胶囊圆角背景。数组采用 Foundation 的星期顺序（星期日至星期六），组件会根据 `firstWeekday` 自动重新排列。
 
 ```swift
 calendarView.appearance.weekdaySymbols = ["日", "一", "二", "三", "四", "五", "六"]
@@ -122,19 +126,19 @@ calendarView.appearance.weekdayLabelCornerRadius = 10
 calendarView.appearance.weekdaySpacing = 4
 calendarView.appearance.weekdayContentInsets = .init(top: 3, left: 8, bottom: 3, right: 8)
 
-calendarView.appearance.selectionAnimation = .scale // or .none
+calendarView.appearance.selectionAnimation = .scale // 也可使用 .none
 calendarView.appearance.selectionAnimationScale = 0.96
 calendarView.appearance.selectionAnimationDuration = 0.16
 calendarView.invalidateAppearance()
 ```
 
-For a contiguous selection:
+选择连续日期范围：
 
 ```swift
 calendarView.selectDates(from: startDate, through: endDate)
 ```
 
-For efficient non-contiguous selection and a booking-style limit:
+高效选择不连续日期并设置类似预订场景的数量限制：
 
 ```swift
 calendarView.allowsMultipleSelection = true
@@ -142,25 +146,20 @@ calendarView.maximumSelectedDates = 5
 calendarView.selectDates(dates, replacingCurrentSelection: true)
 ```
 
-Implement `calendar(_:didReachMaximumSelectionCount:)` to show a limit message. Use
-`selectedDateBounds`, `visibleDates`, `visibleDateRange`, and `isDateSelected(_:)` for state queries.
-When the same day appears as an adjacent-month placeholder, use `cell(for:at:)` or `frame(for:at:)`
-to address that exact occurrence.
+实现 `calendar(_:didReachMaximumSelectionCount:)` 可以在达到数量上限时显示提示。使用 `selectedDateBounds`、`visibleDates`、`visibleDateRange` 和 `isDateSelected(_:)` 查询当前状态。同一天作为相邻月份占位日期重复出现时，可以使用 `cell(for:at:)` 或 `frame(for:at:)` 精确定位对应位置。
 
-For a scope transition:
+切换月视图与周视图：
 
 ```swift
 calendarView.setScope(.week, animated: true)
 
-// Optional: allow vertical swipes to collapse/expand month and week scope.
+// 可选：允许通过垂直滑动收起或展开月视图与周视图。
 calendarView.allowsScopeGesture = true
 ```
 
-The scope gesture is disabled by default so vertical scrolling cannot change the calendar scope unexpectedly.
-When Auto Layout fixes the calendar height, update that constraint from
-`calendar(_:boundingRectWillChange:animated:)` before opting into the gesture.
+范围切换手势默认关闭，避免垂直滚动意外改变日历范围。如果 Auto Layout 固定了日历高度，请先在 `calendar(_:boundingRectWillChange:animated:)` 中更新高度约束，再启用该手势。
 
-For a compact continuous calendar with sticky month headers:
+使用带吸顶月份标题的紧凑连续日历：
 
 ```swift
 calendarView.scrollDirection = .vertical
@@ -169,13 +168,13 @@ calendarView.rowHeight = 64
 calendarView.continuousSectionHeaderHeight = 44
 ```
 
-When Auto Layout controls the height, update its height constraint from:
+如果高度由 Auto Layout 管理，请通过以下代理方法更新高度约束：
 
 ```swift
 func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool)
 ```
 
-## SwiftUI quick start
+## SwiftUI 快速开始
 
 ```swift
 import SwiftUI
@@ -197,26 +196,22 @@ struct ContentView: View {
 }
 ```
 
-## Example and tests
+## 示例与测试
 
-- Open `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` to run the example app. Its menu contains 11 complete UIKit and SwiftUI demonstrations, including range selection, EventKit, custom cells, month/week transitions, continuous scrolling, and per-date appearance.
-- Open the repository folder in Xcode to edit the Swift Package.
-- Run `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,name=iPhone 17' test` for the test suite.
+- 打开 `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` 运行示例应用。菜单包含 11 个完整的 UIKit 和 SwiftUI 示例，涵盖范围选择、EventKit、自定义单元格、月/周切换、连续滚动和按日期配置外观。
+- 在 Xcode 中打开仓库目录，可以直接编辑 Swift Package。
+- 执行 `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,name=iPhone 17' test` 运行测试套件。
 
-The test suite covers civil-date boundaries, daylight-saving transitions, placeholder safety,
-selection batching and limits, large continuous ranges, layout joins, accessibility configuration,
-custom cells, and event-layer reuse. Continuous mode computes row geometry without materializing
-every month and the internal page cache is bounded.
+测试覆盖民用日期边界、夏令时切换、占位日期安全性、批量选择与数量限制、大范围连续滚动、选中区域衔接、无障碍配置、自定义单元格和事件图层复用。连续模式无需实例化所有月份即可计算行布局，内部页面缓存也设置了数量上限。
 
-See [MIGRATION.md](MIGRATION.md) for Objective-C API mapping and behavior changes, and
-[CONTRIBUTING.md](CONTRIBUTING.md) for release-quality checks.
+有关 Objective-C API 对照和行为变化，请参阅 [MIGRATION.md](MIGRATION.md)；有关发布质量检查，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
-## Requirements
+## 环境要求
 
 - iOS 15+
 - Swift 6 / Xcode 16+
-- UIKit; SwiftUI support is optional
+- UIKit；SwiftUI 支持为可选能力
 
-## License
+## 开源许可
 
-MIT. See [LICENSE](LICENSE).
+本项目采用 MIT 许可证，详情请参阅 [LICENSE](LICENSE)。
