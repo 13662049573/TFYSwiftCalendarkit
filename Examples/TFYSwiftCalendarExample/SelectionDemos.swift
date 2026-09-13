@@ -426,79 +426,218 @@ final class RangePickerViewController: UIViewController, TFYSwiftCalendarDataSou
     }
 }
 
+private struct CalendarTagDefinition {
+    let title: String
+    let symbol: String
+    let color: UIColor
+}
+
+private enum CalendarTagCatalog {
+    static let work = CalendarTagDefinition(title: "工作", symbol: "briefcase.fill", color: .systemBlue)
+    static let health = CalendarTagDefinition(title: "健康", symbol: "heart.fill", color: .systemPink)
+    static let exercise = CalendarTagDefinition(title: "运动", symbol: "figure.run", color: .systemGreen)
+    static let rest = CalendarTagDefinition(title: "休息", symbol: "cup.and.saucer.fill", color: .systemOrange)
+    static let all = [work, health, exercise, rest]
+
+    static func tags(for day: Int) -> [CalendarTagDefinition] {
+        var result: [CalendarTagDefinition] = []
+        if day.isMultiple(of: 3) { result.append(work) }
+        if day.isMultiple(of: 5) { result.append(health) }
+        if day.isMultiple(of: 4) { result.append(exercise) }
+        if day.isMultiple(of: 7) { result.append(rest) }
+        return result
+    }
+}
+
 private final class CalendarTagCell: TFYSwiftCalendarCell {
-    private let tags = (0..<4).map { _ in UIImageView() }
-    private let symbols = ["briefcase.fill", "heart.fill", "figure.run", "cup.and.saucer.fill"]
-    private let colors: [UIColor] = [.systemBlue, .systemPink, .systemGreen, .systemOrange]
+    private let tagViews = (0..<2).map { _ in UIImageView() }
+    private var visibleTagCount = 0
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        for tag in tags {
-            tag.contentMode = .center
-            tag.layer.cornerRadius = 4
-            tag.clipsToBounds = true
-            contentView.addSubview(tag)
-        }
+        setUpTagViews()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        setUpTagViews()
+    }
+
+    private func setUpTagViews() {
+        for tagView in tagViews {
+            tagView.contentMode = .center
+            tagView.layer.cornerCurve = .continuous
+            tagView.clipsToBounds = true
+            tagView.isAccessibilityElement = false
+            contentView.addSubview(tagView)
+        }
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        visibleTagCount = 0
+        for tagView in tagViews {
+            tagView.image = nil
+            tagView.isHidden = true
+        }
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        titleLabel.frame = CGRect(x: 4, y: 1, width: contentView.bounds.width - 8, height: 20)
-        let tagArea = CGRect(x: 4, y: 25, width: contentView.bounds.width - 8, height: max(0, contentView.bounds.height - 29))
-        let gap: CGFloat = 2
-        let itemWidth = max(0, (tagArea.width - gap) / 2)
-        let itemHeight = max(0, (tagArea.height - gap) / 2)
-        for index in tags.indices {
-            let column = CGFloat(index % 2)
-            let row = CGFloat(index / 2)
-            tags[index].frame = CGRect(
-                x: tagArea.minX + column * (itemWidth + gap),
-                y: tagArea.minY + row * (itemHeight + gap),
-                width: itemWidth,
-                height: itemHeight
-            )
-        }
+        let selectionDiameter = min(34, contentView.bounds.width - 8)
+        let titleFrame = CGRect(
+            x: contentView.bounds.midX - selectionDiameter / 2,
+            y: 2,
+            width: selectionDiameter,
+            height: selectionDiameter
+        )
+        titleLabel.frame = titleFrame
         shapeLayer.frame = contentView.bounds
-        shapeLayer.path = UIBezierPath(roundedRect: titleLabel.frame, cornerRadius: 4).cgPath
+        shapeLayer.path = UIBezierPath(ovalIn: titleFrame).cgPath
+
+        let indicatorSide: CGFloat = 16
+        let spacing: CGFloat = 4
+        let visibleWidth = CGFloat(visibleTagCount) * indicatorSide
+            + CGFloat(max(0, visibleTagCount - 1)) * spacing
+        var indicatorX = contentView.bounds.midX - visibleWidth / 2
+        let indicatorY = min(titleFrame.maxY + 3, contentView.bounds.maxY - indicatorSide - 3)
+        for (index, tagView) in tagViews.enumerated() {
+            tagView.frame = CGRect(x: indicatorX, y: indicatorY, width: indicatorSide, height: indicatorSide)
+            tagView.layer.cornerRadius = indicatorSide / 2
+            if index < visibleTagCount { indicatorX += indicatorSide + spacing }
+        }
     }
 
-    func configureTags(day: Int) {
-        for index in tags.indices {
-            let visible = (day + index) % 3 != 0
-            tags[index].isHidden = !visible
-            tags[index].backgroundColor = colors[index].withAlphaComponent(0.14)
-            tags[index].image = DemoSymbol.image(symbols[index], color: colors[index])
+    func configure(tags: [CalendarTagDefinition], isCurrentMonth: Bool) {
+        let visibleTags = isCurrentMonth ? Array(tags.prefix(tagViews.count)) : []
+        visibleTagCount = visibleTags.count
+        for (index, tagView) in tagViews.enumerated() {
+            guard visibleTags.indices.contains(index) else {
+                tagView.image = nil
+                tagView.isHidden = true
+                continue
+            }
+            let tag = visibleTags[index]
+            let configuration = UIImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+            tagView.image = UIImage(systemName: tag.symbol, withConfiguration: configuration)?
+                .withTintColor(tag.color, renderingMode: .alwaysOriginal)
+            tagView.backgroundColor = tag.color.withAlphaComponent(0.14)
+            tagView.isHidden = false
         }
+        setNeedsLayout()
     }
 }
 
-final class CalendarTagViewController: UIViewController, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate {
+final class CalendarTagViewController: UIViewController, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate, DemoSmokeTestable {
     private let calendarView = TFYSwiftCalendar()
+    private let scrollView = UIScrollView()
+    private let contentView = UIView()
+    private let detailCard = UIView()
+    private let selectedDateLabel = UILabel()
+    private let selectedTagsLabel = UILabel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "自定义标签日期格"
+        navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemGroupedBackground
 
         calendarView.applyDemoDefaults()
         calendarView.dataSource = self
         calendarView.delegate = self
-        calendarView.rowHeight = 72
-        calendarView.appearance.headerDateFormat = "yyyy年MM月"
-        calendarView.appearance.todayColor = .systemOrange
+        calendarView.headerHeight = 52
+        calendarView.weekdayHeight = 30
+        calendarView.rowHeight = 58
+        calendarView.sectionInsets = UIEdgeInsets(top: 2, left: 4, bottom: 4, right: 4)
+        calendarView.appearance.headerDateFormat = "yyyy年 M月"
+        calendarView.appearance.headerTitleFont = .preferredFont(forTextStyle: .headline)
+        calendarView.appearance.weekdayFont = .preferredFont(forTextStyle: .caption1)
+        calendarView.appearance.titleFont = .preferredFont(forTextStyle: .callout)
+        calendarView.appearance.todayColor = UIColor.systemOrange.withAlphaComponent(0.14)
+        calendarView.appearance.titleTodayColor = .systemOrange
+        calendarView.appearance.selectionColor = .systemBlue
+        calendarView.appearance.todaySelectionColor = .systemBlue
         calendarView.register(CalendarTagCell.self, forCellReuseIdentifier: "tag")
-        calendarView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(calendarView)
-        NSLayoutConstraint.activate([
-            calendarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            calendarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            calendarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            calendarView.heightAnchor.constraint(equalToConstant: calendarView.preferredHeight)
+        calendarView.backgroundColor = .secondarySystemGroupedBackground
+        calendarView.layer.cornerRadius = 20
+        calendarView.layer.cornerCurve = .continuous
+        calendarView.clipsToBounds = true
+
+        detailCard.backgroundColor = .secondarySystemGroupedBackground
+        detailCard.layer.cornerRadius = 20
+        detailCard.layer.cornerCurve = .continuous
+
+        selectedDateLabel.font = .preferredFont(forTextStyle: .headline)
+        selectedDateLabel.adjustsFontForContentSizeCategory = true
+        selectedDateLabel.maximumContentSizeCategory = .extraExtraExtraLarge
+        selectedDateLabel.textColor = .label
+
+        selectedTagsLabel.font = .preferredFont(forTextStyle: .subheadline)
+        selectedTagsLabel.adjustsFontForContentSizeCategory = true
+        selectedTagsLabel.maximumContentSizeCategory = .extraExtraExtraLarge
+        selectedTagsLabel.textColor = .secondaryLabel
+        selectedTagsLabel.numberOfLines = 0
+
+        let legendTitle = UILabel()
+        legendTitle.font = .preferredFont(forTextStyle: .caption1)
+        legendTitle.adjustsFontForContentSizeCategory = true
+        legendTitle.maximumContentSizeCategory = .extraExtraExtraLarge
+        legendTitle.textColor = .secondaryLabel
+        legendTitle.text = "标签说明"
+
+        let firstLegendRow = makeLegendRow(tags: Array(CalendarTagCatalog.all.prefix(2)))
+        let secondLegendRow = makeLegendRow(tags: Array(CalendarTagCatalog.all.suffix(2)))
+        let detailStack = UIStackView(arrangedSubviews: [
+            selectedDateLabel,
+            selectedTagsLabel,
+            legendTitle,
+            firstLegendRow,
+            secondLegendRow
         ])
+        detailStack.axis = .vertical
+        detailStack.spacing = 10
+        detailStack.setCustomSpacing(4, after: selectedDateLabel)
+        detailStack.setCustomSpacing(14, after: selectedTagsLabel)
+        detailStack.translatesAutoresizingMaskIntoConstraints = false
+        detailCard.addSubview(detailStack)
+
+        scrollView.alwaysBounceVertical = true
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        [calendarView, detailCard].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            contentView.addSubview($0)
+        }
+        NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+
+            calendarView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            calendarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            calendarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            calendarView.heightAnchor.constraint(equalToConstant: 52 + 30 + 6 * 58),
+
+            detailCard.topAnchor.constraint(equalTo: calendarView.bottomAnchor, constant: 16),
+            detailCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            detailCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            detailCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+
+            detailStack.topAnchor.constraint(equalTo: detailCard.topAnchor, constant: 18),
+            detailStack.leadingAnchor.constraint(equalTo: detailCard.leadingAnchor, constant: 18),
+            detailStack.trailingAnchor.constraint(equalTo: detailCard.trailingAnchor, constant: -18),
+            detailStack.bottomAnchor.constraint(equalTo: detailCard.bottomAnchor, constant: -18)
+        ])
+        updateSelectionDetails(for: nil)
     }
 
     func calendar(
@@ -514,7 +653,23 @@ final class CalendarTagViewController: UIViewController, TFYSwiftCalendarDataSou
     }
 
     func calendar(_ calendar: TFYSwiftCalendar, willDisplay cell: TFYSwiftCalendarCell, for date: Date) {
-        (cell as? CalendarTagCell)?.configureTags(day: calendar.calendar.component(.day, from: date))
+        let day = calendar.calendar.component(.day, from: date)
+        let tags = CalendarTagCatalog.tags(for: day)
+        (cell as? CalendarTagCell)?.configure(tags: tags, isCurrentMonth: cell.monthPosition == .current)
+        if cell.monthPosition == .current, !tags.isEmpty {
+            let tagNames = tags.map(\.title).joined(separator: "、")
+            cell.accessibilityLabel = [cell.accessibilityLabel, "标签：\(tagNames)"]
+                .compactMap { $0 }
+                .joined(separator: "，")
+        }
+    }
+
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        shouldSelect date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> Bool {
+        monthPosition == .current
     }
 
     func calendar(
@@ -530,6 +685,71 @@ final class CalendarTagViewController: UIViewController, TFYSwiftCalendarDataSou
         didSelect date: Date,
         at monthPosition: TFYSwiftCalendarMonthPosition
     ) {
-        if monthPosition != .current { calendar.setCurrentPage(date, animated: true) }
+        updateSelectionDetails(for: date)
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    func runSmokeTest() {
+        let selectedDate = DemoDate.day(7)
+        calendarView.setCurrentPage(selectedDate, animated: false)
+        calendarView.selectDate(selectedDate, scrollToDate: false)
+        updateSelectionDetails(for: selectedDate)
+    }
+
+    private func makeLegendRow(tags: [CalendarTagDefinition]) -> UIStackView {
+        let row = UIStackView(arrangedSubviews: tags.map(makeLegendItem))
+        row.axis = .horizontal
+        row.spacing = 12
+        row.distribution = .fillEqually
+        return row
+    }
+
+    private func makeLegendItem(tag: CalendarTagDefinition) -> UIView {
+        let icon = UIImageView()
+        let configuration = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+        icon.image = UIImage(systemName: tag.symbol, withConfiguration: configuration)?
+            .withTintColor(tag.color, renderingMode: .alwaysOriginal)
+        icon.backgroundColor = tag.color.withAlphaComponent(0.14)
+        icon.contentMode = .center
+        icon.layer.cornerRadius = 12
+        icon.layer.cornerCurve = .continuous
+        icon.clipsToBounds = true
+        icon.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            icon.widthAnchor.constraint(equalToConstant: 24),
+            icon.heightAnchor.constraint(equalToConstant: 24)
+        ])
+
+        let label = UILabel()
+        label.font = .preferredFont(forTextStyle: .subheadline)
+        label.adjustsFontForContentSizeCategory = true
+        label.maximumContentSizeCategory = .extraExtraExtraLarge
+        label.textColor = .label
+        label.text = tag.title
+
+        let item = UIStackView(arrangedSubviews: [icon, label])
+        item.axis = .horizontal
+        item.alignment = .center
+        item.spacing = 8
+        item.isAccessibilityElement = true
+        item.accessibilityLabel = tag.title
+        return item
+    }
+
+    private func updateSelectionDetails(for date: Date?) {
+        guard let date else {
+            selectedDateLabel.text = "选择一个日期"
+            selectedTagsLabel.text = "轻点日期，查看当天的分类标签"
+            detailCard.accessibilityLabel = "尚未选择日期"
+            return
+        }
+        let day = DemoDate.gregorian.component(.day, from: date)
+        let tags = CalendarTagCatalog.tags(for: day)
+        selectedDateLabel.text = DemoDate.text(date, format: "M月d日 EEEE")
+        selectedTagsLabel.text = tags.isEmpty
+            ? "当天没有安排标签"
+            : tags.map(\.title).joined(separator: " · ")
+        let summary = tags.isEmpty ? "没有安排标签" : "标签为\(tags.map(\.title).joined(separator: "、"))"
+        detailCard.accessibilityLabel = "\(DemoDate.text(date, format: "M月d日 EEEE"))，\(summary)"
     }
 }

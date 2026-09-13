@@ -18,7 +18,7 @@ final class DemoMenuViewController: UITableViewController {
         DemoDescriptor(title: "全屏日历", detail: "无分页连续滚动、系统事件与农历", makeViewController: FullScreenExampleViewController.init),
         DemoDescriptor(title: "loadView 创建", detail: "纯代码生命周期与上下图片", makeViewController: LoadViewExampleViewController.init),
         DemoDescriptor(title: "月/周联动", detail: "日历高度变化、手势与列表联动", makeViewController: ScopeExampleViewController.init),
-        DemoDescriptor(title: "自定义标签日期格", detail: "自定义 Cell 和四象限标签", makeViewController: CalendarTagViewController.init),
+        DemoDescriptor(title: "自定义标签日期格", detail: "紧凑标签、分类图例与日期详情", makeViewController: CalendarTagViewController.init),
         DemoDescriptor(title: "SwiftUI 封装", detail: "UIViewRepresentable、Binding 与状态同步", makeViewController: makeSwiftUIDemo)
     ]
 
