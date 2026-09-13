@@ -102,7 +102,7 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
     }
 }
 
-final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate, EventDemoPresenting {
+final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate, EventDemoPresenting, DemoSmokeTestable {
     let calendarView = TFYSwiftCalendar()
     let eventStore = DemoEventStore()
     let eventMinimumDate = DemoDate.adding(.year, value: -8)
@@ -110,10 +110,12 @@ final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarD
     private let lunarFormatter = TFYSwiftLunarFormatter(timeZone: TimeZone(identifier: "Asia/Shanghai") ?? .current)
     private var showsLunar = false
     private var showsEvents = false
+    private var displayMenuItem: UIBarButtonItem?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "全屏日历"
+        navigationItem.largeTitleDisplayMode = .never
         view.backgroundColor = .systemBackground
 
         calendarView.applyDemoDefaults()
@@ -122,22 +124,25 @@ final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarD
         calendarView.pagingEnabled = false
         calendarView.scrollDirection = .vertical
         calendarView.allowsMultipleSelection = true
-        calendarView.placeholderType = .fillHeadTail
+        calendarView.placeholderType = .none
+        calendarView.headerHeight = 0
+        calendarView.weekdayHeight = 32
+        calendarView.rowHeight = 64
+        calendarView.continuousSectionHeaderHeight = 44
+        calendarView.sectionInsets = UIEdgeInsets(top: 4, left: 8, bottom: 16, right: 8)
         calendarView.appearance.caseOptions = [.weekdaySingleCharacter, .headerUppercase]
+        calendarView.appearance.weekdayTextColor = .secondaryLabel
+        calendarView.collectionView.showsVerticalScrollIndicator = true
         calendarView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(calendarView)
         NSLayoutConstraint.activate([
             calendarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             calendarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             calendarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            calendarView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            calendarView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
         ])
 
-        navigationItem.rightBarButtonItems = [
-            UIBarButtonItem(title: "事件", style: .plain, target: self, action: #selector(toggleEvents)),
-            UIBarButtonItem(title: "农历", style: .plain, target: self, action: #selector(toggleLunar)),
-            UIBarButtonItem(title: "今天", style: .plain, target: self, action: #selector(showToday))
-        ]
+        configureNavigationItems()
     }
 
     func minimumDate(for calendar: TFYSwiftCalendar) -> Date? { eventMinimumDate }
@@ -148,20 +153,66 @@ final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarD
         let detail = events.first?.title ?? (showsLunar ? lunarFormatter.string(from: date) : nil)
         return TFYSwiftCalendarDayContent(
             subtitle: detail,
-            topSubtitle: detail,
             eventColors: Array(events.prefix(3)).map { UIColor(cgColor: $0.calendar.cgColor) }
         )
+    }
+
+    func runSmokeTest() {
+        toggleLunar()
+        calendarView.selectDate(DemoDate.day(-4), scrollToDate: false)
+        calendarView.selectDate(DemoDate.day(3), scrollToDate: false)
+    }
+
+    private func configureNavigationItems() {
+        let todayItem = UIBarButtonItem(
+            image: UIImage(systemName: "calendar"),
+            style: .plain,
+            target: self,
+            action: #selector(showToday)
+        )
+        todayItem.accessibilityLabel = "回到今天"
+
+        let menuItem = UIBarButtonItem(
+            image: UIImage(systemName: "ellipsis.circle"),
+            style: .plain,
+            target: nil,
+            action: nil
+        )
+        menuItem.accessibilityLabel = "显示选项"
+        displayMenuItem = menuItem
+        updateDisplayMenu()
+        navigationItem.rightBarButtonItems = [menuItem, todayItem]
+    }
+
+    private func updateDisplayMenu() {
+        let lunarAction = UIAction(
+            title: "显示农历",
+            image: UIImage(systemName: "moon.stars"),
+            state: showsLunar ? .on : .off
+        ) { [weak self] _ in
+            self?.toggleLunar()
+        }
+        let eventAction = UIAction(
+            title: "显示系统事件",
+            image: UIImage(systemName: "calendar.badge.exclamationmark"),
+            state: showsEvents ? .on : .off
+        ) { [weak self] _ in
+            self?.toggleEvents()
+        }
+        displayMenuItem?.menu = UIMenu(title: "日历内容", children: [lunarAction, eventAction])
     }
 
     @objc private func showToday() { calendarView.setCurrentPage(Date(), animated: true) }
 
     @objc private func toggleLunar() {
         showsLunar.toggle()
+        updateDisplayMenu()
         calendarView.reloadData()
     }
 
     @objc private func toggleEvents() {
         showsEvents.toggle()
+        updateDisplayMenu()
         calendarView.reloadData()
         if showsEvents && eventStore.events.isEmpty { requestCalendarEvents() }
     }

@@ -77,3 +77,59 @@ public final class TFYSwiftCalendarHeaderView: UIView {
     @objc private func previousTapped() { onPrevious?() }
     @objc private func nextTapped() { onNext?() }
 }
+
+@MainActor
+final class TFYSwiftCalendarSectionHeaderView: UICollectionReusableView {
+    static let reuseIdentifier = "TFYSwiftCalendarSectionHeaderView"
+
+    private let titleLabel = UILabel()
+    private let separator = UIView()
+    private let formatter = DateFormatter()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        setUpViews()
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        setUpViews()
+    }
+
+    private func setUpViews() {
+        backgroundColor = .systemBackground
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.maximumContentSizeCategory = .extraExtraExtraLarge
+        titleLabel.isAccessibilityElement = true
+        titleLabel.accessibilityTraits = .header
+        separator.backgroundColor = .separator
+        addSubview(titleLabel)
+        addSubview(separator)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        titleLabel.frame = bounds.insetBy(dx: 16, dy: 0)
+        separator.frame = CGRect(x: 16, y: bounds.height - 0.5, width: max(0, bounds.width - 32), height: 0.5)
+    }
+
+    func update(
+        date: Date,
+        calendar: Calendar,
+        locale: Locale,
+        appearance: TFYSwiftCalendarAppearance
+    ) {
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.timeZone = calendar.timeZone
+        formatter.dateFormat = appearance.headerDateFormat
+        var title = formatter.string(from: date)
+        if appearance.caseOptions.contains(.headerUppercase) {
+            title = title.uppercased(with: locale)
+        }
+        titleLabel.text = title
+        titleLabel.font = appearance.headerTitleFont
+        titleLabel.textColor = appearance.headerTitleColor
+        titleLabel.accessibilityLabel = title
+    }
+}

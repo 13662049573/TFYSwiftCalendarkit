@@ -10,4 +10,5 @@
 - Added Swift Package Manager, CocoaPods metadata, regression tests, and a standalone app with 11 complete demos.
 - Covered custom-cell boundary placeholders safely and corrected localized single-character weekday symbols.
 - Refined detail navigation and range-selection UI with adaptive cards, quick actions, Dark Mode, and dense-calendar Dynamic Type limits.
+- Added compact non-paging vertical layout with optional sticky month section headers.
 - Removed Objective-C runtime forwarding, private KVC, unsafe pointer layouts, and fixed-second day arithmetic.

@@ -81,7 +81,11 @@ open class TFYSwiftCalendar: UIView {
     public var adjustsBoundingRectWhenChangingMonths = false
 
     public var pagingEnabled = true {
-        didSet { collectionView.isPagingEnabled = pagingEnabled }
+        didSet {
+            collectionView.isPagingEnabled = pagingEnabled
+            collectionViewLayout.invalidateLayout()
+            setNeedsLayout()
+        }
     }
 
     public var scrollEnabled = true {
@@ -97,7 +101,18 @@ open class TFYSwiftCalendar: UIView {
     }
 
     public var rowHeight = TFYSwiftCalendarDefaults.rowHeight {
-        didSet { invalidateCalendarLayout() }
+        didSet {
+            collectionViewLayout.continuousRowHeight = rowHeight
+            invalidateCalendarLayout()
+        }
+    }
+
+    /// Height of the sticky month header used by vertical, non-paging calendars. Set to `0` to hide it.
+    public var continuousSectionHeaderHeight: CGFloat = 0 {
+        didSet {
+            collectionViewLayout.continuousSectionHeaderHeight = max(0, continuousSectionHeaderHeight)
+            collectionViewLayout.invalidateLayout()
+        }
     }
 
     public var sectionInsets: UIEdgeInsets = .zero {
@@ -195,9 +210,15 @@ open class TFYSwiftCalendar: UIView {
         collectionView.showsHorizontalScrollIndicator = false
         collectionView.showsVerticalScrollIndicator = false
         collectionView.isPagingEnabled = pagingEnabled
+        collectionViewLayout.continuousRowHeight = rowHeight
         collectionView.allowsMultipleSelection = true
         collectionView.register(TFYSwiftCalendarCell.self, forCellWithReuseIdentifier: Self.defaultCellIdentifier)
         collectionView.register(TFYSwiftCalendarBlankCell.self, forCellWithReuseIdentifier: Self.blankCellIdentifier)
+        collectionView.register(
+            TFYSwiftCalendarSectionHeaderView.self,
+            forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader,
+            withReuseIdentifier: TFYSwiftCalendarSectionHeaderView.reuseIdentifier
+        )
         addSubview(calendarHeaderView)
         addSubview(calendarWeekdayView)
         addSubview(collectionView)
@@ -570,17 +591,23 @@ open class TFYSwiftCalendar: UIView {
         case .horizontal:
             offset = CGPoint(x: CGFloat(section) * collectionView.bounds.width, y: 0)
         case .vertical:
-            offset = CGPoint(x: 0, y: CGFloat(section) * collectionView.bounds.height)
+            collectionView.layoutIfNeeded()
+            offset = CGPoint(x: 0, y: collectionViewLayout.verticalOffset(forSection: section))
         }
         guard offset.x.isFinite, offset.y.isFinite else { return }
         collectionView.setContentOffset(offset, animated: animated)
     }
 
     private func updateCurrentPageFromScrollPosition() {
-        let length = scrollDirection == .horizontal ? collectionView.bounds.width : collectionView.bounds.height
-        guard length > 0 else { return }
-        let offset = scrollDirection == .horizontal ? collectionView.contentOffset.x : collectionView.contentOffset.y
-        let section = min(max(0, Int(round(offset / length))), max(0, numberOfPages - 1))
+        let section: Int
+        if scrollDirection == .vertical && !pagingEnabled {
+            section = collectionViewLayout.section(atVerticalOffset: collectionView.contentOffset.y + 1)
+        } else {
+            let length = scrollDirection == .horizontal ? collectionView.bounds.width : collectionView.bounds.height
+            guard length > 0 else { return }
+            let offset = scrollDirection == .horizontal ? collectionView.contentOffset.x : collectionView.contentOffset.y
+            section = min(max(0, Int(round(offset / length))), max(0, numberOfPages - 1))
+        }
         let newPage = canonicalPageDate(for: math.pageDate(at: section, scope: scope, startingAt: minimumDate))
         guard pageIndex(for: newPage) != pageIndex(for: currentPage) else { return }
         currentPage = newPage
@@ -670,6 +697,24 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
 
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         items(for: section).count
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        viewForSupplementaryElementOfKind kind: String,
+        at indexPath: IndexPath
+    ) -> UICollectionReusableView {
+        guard kind == UICollectionView.elementKindSectionHeader,
+              let header = collectionView.dequeueReusableSupplementaryView(
+                  ofKind: kind,
+                  withReuseIdentifier: TFYSwiftCalendarSectionHeaderView.reuseIdentifier,
+                  for: indexPath
+              ) as? TFYSwiftCalendarSectionHeaderView else {
+            return UICollectionReusableView()
+        }
+        let date = math.pageDate(at: indexPath.section, scope: scope, startingAt: minimumDate)
+        header.update(date: date, calendar: calendar, locale: locale, appearance: appearance)
+        return header
     }
 
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {

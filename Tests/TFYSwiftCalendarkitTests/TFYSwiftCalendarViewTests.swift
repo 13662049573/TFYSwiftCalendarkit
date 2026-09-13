@@ -148,6 +148,40 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertTrue(weekday.weekdayLabels.allSatisfy { $0.maximumContentSizeCategory == .extraExtraLarge })
     }
 
+    func testNonPagingVerticalLayoutUsesCompactContinuousSections() {
+        let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 700))
+        view.calendar = systemCalendar
+        view.configuredDateRange = date(2024, 1, 1)...date(2024, 3, 31)
+        view.placeholderType = .fillSixRows
+        view.rowHeight = 50
+        view.continuousSectionHeaderHeight = 44
+        view.pagingEnabled = false
+        view.scrollDirection = .vertical
+        view.reloadData()
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        let firstCell = view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 0, section: 0))
+        XCTAssertEqual(firstCell?.frame.height ?? 0, 50, accuracy: 0.1)
+        XCTAssertEqual(firstCell?.frame.minY ?? 0, 44, accuracy: 0.1)
+        let firstHeader = view.collectionViewLayout.layoutAttributesForSupplementaryView(
+            ofKind: UICollectionView.elementKindSectionHeader,
+            at: IndexPath(item: 0, section: 0)
+        )
+        XCTAssertEqual(firstHeader?.frame.height ?? 0, 44, accuracy: 0.1)
+        XCTAssertLessThan(view.collectionView.contentSize.height, view.collectionView.bounds.height * 3)
+
+        view.collectionView.contentOffset.y = 120
+        let pinnedHeader = view.collectionViewLayout.layoutAttributesForSupplementaryView(
+            ofKind: UICollectionView.elementKindSectionHeader,
+            at: IndexPath(item: 0, section: 0)
+        )
+        XCTAssertEqual(pinnedHeader?.frame.minY ?? 0, 120, accuracy: 0.1)
+
+        view.setCurrentPage(date(2024, 3, 1), animated: false)
+        XCTAssertEqual(view.collectionView.contentOffset.y, 688, accuracy: 0.1)
+    }
+
     func testCustomCellsCanBeDequeuedForBoundaryPlaceholders() {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
         view.calendar = systemCalendar

@@ -5,7 +5,7 @@
 ## Features
 
 - Month and week scopes
-- Horizontal and vertical paging
+- Horizontal/vertical paging and compact continuous vertical scrolling
 - Configurable first weekday, locale, calendar, and time zone
 - None, head/tail, and fixed six-row placeholder modes
 - Single, multiple, swipe, and linked-range selection
@@ -81,6 +81,15 @@ For a scope transition:
 
 ```swift
 calendarView.setScope(.week, animated: true)
+```
+
+For a compact continuous calendar with sticky month headers:
+
+```swift
+calendarView.scrollDirection = .vertical
+calendarView.pagingEnabled = false
+calendarView.rowHeight = 64
+calendarView.continuousSectionHeaderHeight = 44
 ```
 
 When Auto Layout controls the height, update its height constraint from:
