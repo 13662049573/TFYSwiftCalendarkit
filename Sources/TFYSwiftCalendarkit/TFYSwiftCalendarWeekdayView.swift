@@ -5,6 +5,8 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
     public private(set) var weekdayLabels: [UILabel] = []
     public let stackView = UIStackView()
     private weak var appliedAppearance: TFYSwiftCalendarAppearance?
+    private var requestedContentInsets = UIEdgeInsets.zero
+    private var requestedSpacing: CGFloat = 0
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -20,6 +22,8 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
         stackView.axis = .horizontal
         stackView.distribution = .fillEqually
         stackView.alignment = .fill
+        stackView.layoutMargins = .zero
+        stackView.isLayoutMarginsRelativeArrangement = true
         addSubview(stackView)
 
         weekdayLabels = (0..<7).map { _ in
@@ -37,6 +41,7 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         stackView.frame = bounds
+        applyLayoutMetrics()
     }
 
     internal func update(calendar: Calendar, locale: Locale, appearance: TFYSwiftCalendarAppearance) {
@@ -54,9 +59,14 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
         guard accessibilitySymbols.count == 7, displaySymbols.count == 7 else { return }
 
         backgroundColor = appearance.weekdayBackgroundColor
-        stackView.spacing = max(0, appearance.weekdaySpacing)
-        stackView.layoutMargins = appearance.weekdayContentInsets
-        stackView.isLayoutMarginsRelativeArrangement = true
+        requestedSpacing = max(0, appearance.weekdaySpacing)
+        requestedContentInsets = UIEdgeInsets(
+            top: max(0, appearance.weekdayContentInsets.top),
+            left: max(0, appearance.weekdayContentInsets.left),
+            bottom: max(0, appearance.weekdayContentInsets.bottom),
+            right: max(0, appearance.weekdayContentInsets.right)
+        )
+        applyLayoutMetrics()
 
         let textColors = validated(appearance.weekdayTextColors)
         let backgroundColors = validated(appearance.weekdayLabelBackgroundColors)
@@ -97,5 +107,33 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
     private func validated<T>(_ values: [T]?) -> [T]? {
         guard let values, values.count == 7 else { return nil }
         return values
+    }
+
+    private func applyLayoutMetrics() {
+        let horizontalRequirement = requestedContentInsets.left
+            + requestedContentInsets.right
+            + requestedSpacing * CGFloat(max(0, weekdayLabels.count - 1))
+        let horizontalScale = scaleToFit(requirement: horizontalRequirement, available: bounds.width)
+        let verticalRequirement = requestedContentInsets.top + requestedContentInsets.bottom
+        let verticalScale = scaleToFit(requirement: verticalRequirement, available: bounds.height)
+        let effectiveInsets = UIEdgeInsets(
+            top: requestedContentInsets.top * verticalScale,
+            left: requestedContentInsets.left * horizontalScale,
+            bottom: requestedContentInsets.bottom * verticalScale,
+            right: requestedContentInsets.right * horizontalScale
+        )
+        let effectiveSpacing = requestedSpacing * horizontalScale
+
+        if stackView.spacing != effectiveSpacing {
+            stackView.spacing = effectiveSpacing
+        }
+        if stackView.layoutMargins != effectiveInsets {
+            stackView.layoutMargins = effectiveInsets
+        }
+    }
+
+    private func scaleToFit(requirement: CGFloat, available: CGFloat) -> CGFloat {
+        guard requirement > 0, available > 0 else { return requirement > 0 ? 0 : 1 }
+        return min(1, available / requirement)
     }
 }

@@ -252,6 +252,12 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertTrue(weekdayView.weekdayLabels[6].backgroundColor?.isEqual(UIColor.systemGray) == true)
         XCTAssertEqual(weekdayView.weekdayLabels[0].layer.cornerRadius, 9)
         XCTAssertEqual(weekdayView.weekdayLabels[0].layer.borderWidth, 1.5)
+        XCTAssertEqual(weekdayView.stackView.spacing, 0)
+        XCTAssertEqual(weekdayView.stackView.layoutMargins, .zero)
+
+        weekdayView.frame = CGRect(x: 0, y: 0, width: 350, height: 40)
+        weekdayView.layoutIfNeeded()
+
         XCTAssertEqual(weekdayView.stackView.spacing, 4)
         XCTAssertEqual(weekdayView.stackView.layoutMargins, appearance.weekdayContentInsets)
     }
