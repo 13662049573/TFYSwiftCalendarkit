@@ -28,5 +28,6 @@ let package = Package(
             dependencies: ["TFYSwiftCalendarkit"],
             path: "Tests/TFYSwiftCalendarkitTests"
         )
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
