@@ -9,6 +9,11 @@ private enum RangeCellRole {
     case single
 }
 
+private enum RangeActionStyle {
+    case tinted
+    case gray
+}
+
 private final class RangePickerCell: TFYSwiftCalendarCell {
     private let rangeLayer = CALayer()
     private let endpointLayer = CALayer()
@@ -40,6 +45,8 @@ private final class RangePickerCell: TFYSwiftCalendarCell {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        rangeLayer.backgroundColor = UIColor.systemOrange.withAlphaComponent(0.24).resolvedColor(with: traitCollection).cgColor
+        endpointLayer.backgroundColor = UIColor.systemOrange.resolvedColor(with: traitCollection).cgColor
         titleLabel.frame = contentView.bounds
         rangeLayer.frame = CGRect(x: 0, y: contentView.bounds.midY - 20, width: contentView.bounds.width, height: 40)
         let diameter = min(40, min(contentView.bounds.width, contentView.bounds.height) - 6)
@@ -73,47 +80,138 @@ private final class RangePickerCell: TFYSwiftCalendarCell {
 
 final class RangePickerViewController: UIViewController, TFYSwiftCalendarDataSource, TFYSwiftCalendarDelegate, DemoSmokeTestable {
     private let calendarView = TFYSwiftCalendar()
-    private let statusLabel = UILabel()
+    private let scrollView = UIScrollView()
+    private let contentView = UIView()
+    private let selectionCard = UIView()
+    private let startValueLabel = UILabel()
+    private let endValueLabel = UILabel()
+    private let instructionLabel = UILabel()
+    private lazy var clearButton = makeActionButton(
+        title: "清除",
+        symbol: "xmark",
+        style: .gray,
+        action: #selector(clearSelection)
+    )
+    private lazy var nextWeekButton = makeActionButton(
+        title: "未来 7 天",
+        symbol: "calendar.badge.plus",
+        style: .tinted,
+        action: #selector(selectNextWeek)
+    )
     private var startDate: Date?
     private var endDate: Date?
 
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "范围选择"
-        view.backgroundColor = .systemBackground
+        navigationItem.largeTitleDisplayMode = .never
+        view.backgroundColor = .systemGroupedBackground
 
         calendarView.applyDemoDefaults()
         calendarView.dataSource = self
         calendarView.delegate = self
-        calendarView.pagingEnabled = false
         calendarView.allowsMultipleSelection = true
-        calendarView.rowHeight = 60
-        calendarView.weekdayHeight = 0
-        calendarView.placeholderType = .fillHeadTail
+        calendarView.headerHeight = 52
+        calendarView.weekdayHeight = 30
+        calendarView.rowHeight = 48
+        calendarView.placeholderType = .fillSixRows
         calendarView.today = nil
         calendarView.swipeToChooseGestureRecognizer.isEnabled = true
         calendarView.register(RangePickerCell.self, forCellReuseIdentifier: "range")
+        calendarView.backgroundColor = .secondarySystemGroupedBackground
+        calendarView.layer.cornerRadius = 20
+        calendarView.layer.cornerCurve = .continuous
+        calendarView.clipsToBounds = true
+        calendarView.sectionInsets = UIEdgeInsets(top: 2, left: 4, bottom: 2, right: 4)
+        calendarView.appearance.headerTitleFont = .preferredFont(forTextStyle: .headline)
+        calendarView.appearance.weekdayFont = .preferredFont(forTextStyle: .caption1)
 
-        statusLabel.font = .preferredFont(forTextStyle: .footnote)
-        statusLabel.textColor = .secondaryLabel
-        statusLabel.textAlignment = .center
-        statusLabel.numberOfLines = 0
-        statusLabel.text = "选择起点和终点，或长按后滑动"
+        scrollView.alwaysBounceVertical = true
+        scrollView.keyboardDismissMode = .interactive
+        selectionCard.backgroundColor = .secondarySystemGroupedBackground
+        selectionCard.layer.cornerRadius = 20
+        selectionCard.layer.cornerCurve = .continuous
 
-        [calendarView, statusLabel].forEach {
+        [startValueLabel, endValueLabel].forEach {
+            $0.font = .preferredFont(forTextStyle: .headline)
+            $0.adjustsFontForContentSizeCategory = true
+            $0.maximumContentSizeCategory = .extraExtraExtraLarge
+            $0.textColor = .secondaryLabel
+            $0.numberOfLines = 2
+        }
+        startValueLabel.accessibilityLabel = "开始日期"
+        endValueLabel.accessibilityLabel = "结束日期"
+
+        instructionLabel.font = .preferredFont(forTextStyle: .footnote)
+        instructionLabel.adjustsFontForContentSizeCategory = true
+        instructionLabel.maximumContentSizeCategory = .extraExtraExtraLarge
+        instructionLabel.textColor = .secondaryLabel
+        instructionLabel.textAlignment = .center
+        instructionLabel.numberOfLines = 0
+        nextWeekButton.tintColor = .systemOrange
+        nextWeekButton.accessibilityHint = "选择从今天开始的七天"
+        clearButton.accessibilityHint = "移除当前选择"
+
+        let startColumn = makeDateColumn(title: "开始日期", valueLabel: startValueLabel)
+        let endColumn = makeDateColumn(title: "结束日期", valueLabel: endValueLabel)
+        let arrowView = UIImageView(image: UIImage(systemName: "arrow.right"))
+        arrowView.tintColor = .tertiaryLabel
+        arrowView.setContentHuggingPriority(.required, for: .horizontal)
+        arrowView.accessibilityElementsHidden = true
+        let dateRow = UIStackView(arrangedSubviews: [startColumn, arrowView, endColumn])
+        dateRow.alignment = .center
+        dateRow.spacing = 12
+        startColumn.widthAnchor.constraint(equalTo: endColumn.widthAnchor).isActive = true
+
+        let actionRow = UIStackView(arrangedSubviews: [nextWeekButton, clearButton])
+        actionRow.axis = .horizontal
+        actionRow.spacing = 12
+        actionRow.distribution = .fillEqually
+
+        let cardStack = UIStackView(arrangedSubviews: [dateRow, actionRow, instructionLabel])
+        cardStack.axis = .vertical
+        cardStack.spacing = 16
+        cardStack.translatesAutoresizingMaskIntoConstraints = false
+        selectionCard.addSubview(cardStack)
+
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(scrollView)
+        scrollView.addSubview(contentView)
+        [calendarView, selectionCard].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
-            view.addSubview($0)
+            contentView.addSubview($0)
         }
         NSLayoutConstraint.activate([
-            calendarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            calendarView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            calendarView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            calendarView.bottomAnchor.constraint(equalTo: statusLabel.topAnchor, constant: -8),
-            statusLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            statusLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            statusLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
-            statusLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 36)
+            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+
+            contentView.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: scrollView.contentLayoutGuide.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor),
+            contentView.widthAnchor.constraint(equalTo: scrollView.frameLayoutGuide.widthAnchor),
+
+            calendarView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            calendarView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            calendarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            calendarView.heightAnchor.constraint(equalToConstant: 52 + 30 + 6 * 48),
+
+            selectionCard.topAnchor.constraint(equalTo: calendarView.bottomAnchor, constant: 16),
+            selectionCard.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            selectionCard.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            selectionCard.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
+
+            cardStack.topAnchor.constraint(equalTo: selectionCard.topAnchor, constant: 20),
+            cardStack.leadingAnchor.constraint(equalTo: selectionCard.leadingAnchor, constant: 20),
+            cardStack.trailingAnchor.constraint(equalTo: selectionCard.trailingAnchor, constant: -20),
+            cardStack.bottomAnchor.constraint(equalTo: selectionCard.bottomAnchor, constant: -20),
+            nextWeekButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+            clearButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
         ])
+        updateRangePresentation()
     }
 
     func minimumDate(for calendar: TFYSwiftCalendar) -> Date? {
@@ -167,6 +265,9 @@ final class RangePickerViewController: UIViewController, TFYSwiftCalendarDataSou
             endDate = date
         }
         updateRangePresentation()
+        if calendar.swipeToChooseGestureRecognizer.state != .changed {
+            UISelectionFeedbackGenerator().selectionChanged()
+        }
     }
 
     func calendar(
@@ -184,8 +285,66 @@ final class RangePickerViewController: UIViewController, TFYSwiftCalendarDataSou
     }
 
     func runSmokeTest() {
-        let start = DemoDate.adding(.day, value: 1)
-        let end = DemoDate.adding(.day, value: 5)
+        selectNextWeek()
+    }
+
+    private func makeDateColumn(title: String, valueLabel: UILabel) -> UIStackView {
+        let titleLabel = UILabel()
+        titleLabel.font = .preferredFont(forTextStyle: .caption1)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.maximumContentSizeCategory = .extraExtraExtraLarge
+        titleLabel.textColor = .secondaryLabel
+        titleLabel.text = title
+        let stack = UIStackView(arrangedSubviews: [titleLabel, valueLabel])
+        stack.axis = .vertical
+        stack.spacing = 4
+        return stack
+    }
+
+    private func makeActionButton(
+        title: String,
+        symbol: String,
+        style: RangeActionStyle,
+        action: Selector
+    ) -> UIButton {
+        var configuration: UIButton.Configuration
+        switch style {
+        case .tinted: configuration = .tinted()
+        case .gray: configuration = .gray()
+        }
+        configuration.title = title
+        configuration.image = UIImage(systemName: symbol)
+        configuration.imagePadding = 6
+        configuration.cornerStyle = .large
+        configuration.titleLineBreakMode = .byClipping
+        configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+            var attributes = attributes
+            let baseFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
+            attributes.font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont, maximumPointSize: 24)
+            return attributes
+        }
+        let button = UIButton(configuration: configuration)
+        button.titleLabel?.maximumContentSizeCategory = .extraExtraExtraLarge
+        button.addTarget(self, action: action, for: .touchUpInside)
+        return button
+    }
+
+    @objc private func clearSelection() {
+        for date in calendarView.selectedDates {
+            calendarView.deselectDate(date)
+        }
+        startDate = nil
+        endDate = nil
+        updateRangePresentation()
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    @objc private func selectNextWeek() {
+        clearSelection()
+        let start = DemoDate.day(0)
+        let end = DemoDate.day(6)
+        calendarView.setCurrentPage(start, animated: true)
         calendarView.selectDate(start, scrollToDate: false)
         calendarView.selectDate(end, scrollToDate: false)
     }
@@ -195,9 +354,31 @@ final class RangePickerViewController: UIViewController, TFYSwiftCalendarDataSou
             guard let date = calendarView.date(for: cell) else { continue }
             configure(cell: cell, for: date)
         }
-        let start = startDate.map { DemoDate.text($0) } ?? "—"
-        let end = endDate.map { DemoDate.text($0) } ?? "—"
-        statusLabel.text = "起点：\(start)    终点：\(end)"
+        startValueLabel.text = startDate.map(formattedDate) ?? "请选择"
+        endValueLabel.text = endDate.map(formattedDate) ?? "请选择"
+        startValueLabel.accessibilityLabel = startDate.map { "开始日期，\(DemoDate.text($0, format: "yyyy年M月d日 EEEE"))" } ?? "开始日期，未选择"
+        endValueLabel.accessibilityLabel = endDate.map { "结束日期，\(DemoDate.text($0, format: "yyyy年M月d日 EEEE"))" } ?? "结束日期，未选择"
+        startValueLabel.textColor = startDate == nil ? .secondaryLabel : .label
+        endValueLabel.textColor = endDate == nil ? .secondaryLabel : .label
+        clearButton.isEnabled = startDate != nil || endDate != nil
+
+        if let startDate, let endDate {
+            let lower = min(startDate, endDate)
+            let upper = max(startDate, endDate)
+            let days = (DemoDate.gregorian.dateComponents([.day], from: lower, to: upper).day ?? 0) + 1
+            instructionLabel.text = "已选择 \(days) 天 · 再点日期可重新开始"
+            selectionCard.accessibilityLabel = "已选择从 \(DemoDate.text(lower)) 到 \(DemoDate.text(upper))，共 \(days) 天"
+        } else if startDate != nil {
+            instructionLabel.text = "请选择结束日期，或长按后拖动"
+            selectionCard.accessibilityLabel = "已选择开始日期，等待选择结束日期"
+        } else {
+            instructionLabel.text = "轻点选择起止日期，也可长按后拖动"
+            selectionCard.accessibilityLabel = "尚未选择日期"
+        }
+    }
+
+    private func formattedDate(_ date: Date) -> String {
+        "\(DemoDate.text(date, format: "M月d日"))\n\(DemoDate.text(date, format: "EEEE"))"
     }
 
     private func configure(cell: TFYSwiftCalendarCell, for date: Date) {

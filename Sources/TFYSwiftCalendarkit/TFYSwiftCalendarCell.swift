@@ -38,6 +38,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         [titleLabel, subtitleLabel, topSubtitleLabel].forEach {
             $0.textAlignment = .center
             $0.adjustsFontForContentSizeCategory = true
+            $0.maximumContentSizeCategory = .extraExtraLarge
             $0.minimumScaleFactor = 0.65
             $0.adjustsFontSizeToFitWidth = true
             contentView.addSubview($0)

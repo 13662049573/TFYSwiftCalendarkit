@@ -25,6 +25,7 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
             let label = UILabel()
             label.textAlignment = .center
             label.adjustsFontForContentSizeCategory = true
+            label.maximumContentSizeCategory = .extraExtraLarge
             label.minimumScaleFactor = 0.7
             label.adjustsFontSizeToFitWidth = true
             stackView.addArrangedSubview(label)

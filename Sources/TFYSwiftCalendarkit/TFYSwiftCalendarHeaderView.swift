@@ -24,11 +24,13 @@ public final class TFYSwiftCalendarHeaderView: UIView {
     private func setUpViews() {
         titleLabel.textAlignment = .center
         titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.maximumContentSizeCategory = .extraExtraExtraLarge
         titleLabel.minimumScaleFactor = 0.7
         titleLabel.adjustsFontSizeToFitWidth = true
 
-        previousButton.setImage(UIImage(systemName: "chevron.left"), for: .normal)
-        nextButton.setImage(UIImage(systemName: "chevron.right"), for: .normal)
+        let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
+        previousButton.setImage(UIImage(systemName: "chevron.left", withConfiguration: symbolConfiguration), for: .normal)
+        nextButton.setImage(UIImage(systemName: "chevron.right", withConfiguration: symbolConfiguration), for: .normal)
         previousButton.accessibilityLabel = NSLocalizedString("Previous page", comment: "Calendar previous page")
         nextButton.accessibilityLabel = NSLocalizedString("Next page", comment: "Calendar next page")
         previousButton.addTarget(self, action: #selector(previousTapped), for: .touchUpInside)

@@ -35,7 +35,9 @@ final class DemoMenuViewController: UITableViewController {
 
     func makeDemo(at index: Int) -> UIViewController? {
         guard demos.indices.contains(index) else { return nil }
-        return demos[index].makeViewController()
+        let viewController = demos[index].makeViewController()
+        viewController.navigationItem.largeTitleDisplayMode = .never
+        return viewController
     }
 
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -57,6 +59,7 @@ final class DemoMenuViewController: UITableViewController {
 
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
-        navigationController?.pushViewController(demos[indexPath.row].makeViewController(), animated: true)
+        guard let viewController = makeDemo(at: indexPath.row) else { return }
+        navigationController?.pushViewController(viewController, animated: true)
     }
 }

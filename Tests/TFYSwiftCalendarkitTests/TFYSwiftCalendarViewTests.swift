@@ -135,6 +135,19 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(weekdayView.weekdayLabels.compactMap(\.text), ["一", "二", "三", "四", "五", "六", "日"])
     }
 
+    func testDenseCalendarLabelsCapDynamicTypeWithoutDisablingIt() {
+        let cell = TFYSwiftCalendarCell()
+        let header = TFYSwiftCalendarHeaderView()
+        let weekday = TFYSwiftCalendarWeekdayView()
+
+        XCTAssertTrue(cell.titleLabel.adjustsFontForContentSizeCategory)
+        XCTAssertEqual(cell.titleLabel.maximumContentSizeCategory, .extraExtraLarge)
+        XCTAssertTrue(header.titleLabel.adjustsFontForContentSizeCategory)
+        XCTAssertEqual(header.titleLabel.maximumContentSizeCategory, .extraExtraExtraLarge)
+        XCTAssertTrue(weekday.weekdayLabels.allSatisfy(\.adjustsFontForContentSizeCategory))
+        XCTAssertTrue(weekday.weekdayLabels.allSatisfy { $0.maximumContentSizeCategory == .extraExtraLarge })
+    }
+
     func testCustomCellsCanBeDequeuedForBoundaryPlaceholders() {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
         view.calendar = systemCalendar
