@@ -37,6 +37,11 @@ public enum TFYSwiftCalendarFillType: Int, CaseIterable, Sendable {
     case linked
 }
 
+public enum TFYSwiftCalendarSelectionAnimation: Int, CaseIterable, Sendable {
+    case none
+    case scale
+}
+
 public enum TFYSwiftCalendarSeparatorStyle: Int, CaseIterable, Sendable {
     case none
     case rows

@@ -4,7 +4,7 @@ Open `TFYSwiftCalendarExample.xcodeproj`, select an iOS simulator, and run the `
 
 The menu contains runnable, pure-Swift examples for:
 
-- Complete month/week, lunar, event-dot, and multiple-selection overview
+- Polished month/week, lunar, event-dot, weekday-style, and multiple-selection overview
 - Range selection with endpoints, middle dates, and swipe-to-choose
 - DIY colors, lunar text, and EventKit data
 - External previous/next page controls

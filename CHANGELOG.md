@@ -12,6 +12,9 @@
 - Expanded regression coverage and added automated package/example build checks.
 - Added configurable normal/selected border widths and a reusable circular-border day-style factory.
 - Refined the per-date appearance demo with true circular outlines, cleaner content separation, and an adaptive style legend.
+- Removed selection and scope-transition flashes by updating visible cells in place and eliminating opacity-based scope animation.
+- Added custom weekday symbols, accessibility names, per-day colors/backgrounds, spacing, insets, borders, and pill corners.
+- Redesigned the complete overview demo with adaptive cards, a styled month/week control, clearer selection summaries, and uncluttered placeholders.
 
 ## 1.0.0
 

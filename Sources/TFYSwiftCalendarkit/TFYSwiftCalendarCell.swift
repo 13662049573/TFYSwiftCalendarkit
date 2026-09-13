@@ -212,16 +212,25 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
     }
 
     internal func animateSelection() {
-        guard !UIAccessibility.isReduceMotionEnabled else {
+        guard let appearance = appliedAppearance,
+              appearance.selectionAnimation == .scale,
+              !UIAccessibility.isReduceMotionEnabled else {
             transform = .identity
             return
         }
-        transform = CGAffineTransform(scaleX: 0.88, y: 0.88)
+        let scale = max(0.8, min(1, appearance.selectionAnimationScale))
+        let duration = max(0, appearance.selectionAnimationDuration)
+        guard scale < 1, duration > 0 else {
+            transform = .identity
+            return
+        }
+        layer.removeAllAnimations()
+        transform = CGAffineTransform(scaleX: scale, y: scale)
         UIView.animate(
-            withDuration: 0.22,
+            withDuration: duration,
             delay: 0,
-            usingSpringWithDamping: 0.65,
-            initialSpringVelocity: 0.3,
+            usingSpringWithDamping: 0.78,
+            initialSpringVelocity: 0.2,
             options: [.allowUserInteraction, .beginFromCurrentState]
         ) {
             self.transform = .identity

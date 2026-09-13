@@ -225,6 +225,37 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(weekdayView.weekdayLabels.compactMap(\.text), ["一", "二", "三", "四", "五", "六", "日"])
     }
 
+    func testWeekdayBarSupportsPerDaySymbolsColorsAndPillStyling() {
+        var calendar = systemCalendar
+        calendar.firstWeekday = 2
+        let appearance = TFYSwiftCalendarAppearance()
+        appearance.weekdaySymbols = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        appearance.weekdayTextColors = [
+            .systemRed, .systemBlue, .systemGreen, .systemOrange,
+            .systemPurple, .systemTeal, .systemPink
+        ]
+        appearance.weekdayLabelBackgroundColors = [
+            .systemGray, .systemGray2, .systemGray3, .systemGray4,
+            .systemGray5, .systemGray6, .systemBrown
+        ]
+        appearance.weekdaySpacing = 4
+        appearance.weekdayContentInsets = UIEdgeInsets(top: 2, left: 6, bottom: 2, right: 6)
+        appearance.weekdayLabelCornerRadius = 9
+        appearance.weekdayLabelBorderColor = .systemIndigo
+        appearance.weekdayLabelBorderWidth = 1.5
+        let weekdayView = TFYSwiftCalendarWeekdayView()
+
+        weekdayView.update(calendar: calendar, locale: Locale(identifier: "en_US"), appearance: appearance)
+
+        XCTAssertEqual(weekdayView.weekdayLabels.compactMap(\.text), ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"])
+        XCTAssertTrue(weekdayView.weekdayLabels[0].textColor.isEqual(UIColor.systemBlue))
+        XCTAssertTrue(weekdayView.weekdayLabels[6].backgroundColor?.isEqual(UIColor.systemGray) == true)
+        XCTAssertEqual(weekdayView.weekdayLabels[0].layer.cornerRadius, 9)
+        XCTAssertEqual(weekdayView.weekdayLabels[0].layer.borderWidth, 1.5)
+        XCTAssertEqual(weekdayView.stackView.spacing, 4)
+        XCTAssertEqual(weekdayView.stackView.layoutMargins, appearance.weekdayContentInsets)
+    }
+
     func testDenseCalendarLabelsCapDynamicTypeWithoutDisablingIt() {
         let cell = TFYSwiftCalendarCell()
         let header = TFYSwiftCalendarHeaderView()
@@ -373,6 +404,26 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
 
         XCTAssertGreaterThan(source.dequeuedCellCount, 0)
         XCTAssertTrue(view.visibleCells.contains { $0 is TestCalendarCell })
+    }
+
+    func testSelectionUpdatesVisibleCustomCellWithoutRedequeueing() {
+        let view = makeCalendarView()
+        view.register(TestCalendarCell.self, forCellReuseIdentifier: "custom")
+        let source = CustomCellDataSource()
+        view.dataSource = source
+        view.reloadData()
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+        let selectedDate = date(2024, 5, 11)
+        let originalCell = view.cell(for: selectedDate)
+        let dequeueCount = source.dequeuedCellCount
+
+        view.selectDate(selectedDate, scrollToDate: false)
+
+        let updatedCell = view.cell(for: selectedDate)
+        XCTAssertTrue(originalCell === updatedCell)
+        XCTAssertTrue(updatedCell?.cellState.contains(.selected) == true)
+        XCTAssertEqual(source.dequeuedCellCount, dequeueCount)
     }
 
     private func makeCalendarView() -> TFYSwiftCalendar {

@@ -18,8 +18,29 @@ public final class TFYSwiftCalendarAppearance {
     public var eventDefaultColor = UIColor.systemBlue.withAlphaComponent(0.75)
     public var eventSelectionColor = UIColor.white
     public var weekdayTextColor = UIColor.secondaryLabel
+    public var weekdayBackgroundColor = UIColor.clear
+    public var weekdayLabelBackgroundColor = UIColor.clear
+    public var weekdayLabelBorderColor = UIColor.clear
     public var headerTitleColor = UIColor.label
     public var headerDateFormat = "yyyy MMMM"
+
+    /// Optional weekday symbols in Foundation weekday order: Sunday through Saturday.
+    /// Values are automatically reordered to match `firstWeekday`.
+    public var weekdaySymbols: [String]?
+
+    /// Optional VoiceOver weekday names in Foundation weekday order: Sunday through Saturday.
+    public var weekdayAccessibilitySymbols: [String]?
+
+    /// Optional per-weekday text colors in Foundation weekday order: Sunday through Saturday.
+    public var weekdayTextColors: [UIColor]?
+
+    /// Optional per-weekday backgrounds in Foundation weekday order: Sunday through Saturday.
+    public var weekdayLabelBackgroundColors: [UIColor]?
+
+    public var weekdayContentInsets = UIEdgeInsets.zero
+    public var weekdaySpacing: CGFloat = 0
+    public var weekdayLabelCornerRadius: CGFloat = 0
+    public var weekdayLabelBorderWidth: CGFloat = 0
 
     public var titleDefaultColor = UIColor.label
     public var titleSelectionColor = UIColor.white
@@ -53,6 +74,9 @@ public final class TFYSwiftCalendarAppearance {
     public var separatorStyle: TFYSwiftCalendarSeparatorStyle = .none
     public var caseOptions: TFYSwiftCalendarCaseOptions = []
     public var headerOrder: TFYSwiftCalendarHeaderOrder = .monthAboveYear
+    public var selectionAnimation: TFYSwiftCalendarSelectionAnimation = .scale
+    public var selectionAnimationDuration: TimeInterval = 0.18
+    public var selectionAnimationScale: CGFloat = 0.94
 
     public init() {}
 

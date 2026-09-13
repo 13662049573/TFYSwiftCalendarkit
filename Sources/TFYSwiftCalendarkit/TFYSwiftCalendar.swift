@@ -361,11 +361,9 @@ open class TFYSwiftCalendar: UIView {
         delegate?.calendar(self, boundingRectWillChange: targetBounds, animated: animated)
 
         let updates = {
-            self.collectionView.alpha = 1
             self.superview?.layoutIfNeeded()
             self.layoutIfNeeded()
         }
-        collectionView.alpha = animated ? 0.35 : 1
         if animated {
             UIView.animate(
                 withDuration: TFYSwiftCalendarDefaults.animationDuration,
@@ -541,7 +539,10 @@ open class TFYSwiftCalendar: UIView {
     public func reloadDates(_ dates: [Date]) {
         let paths = indexPaths(for: dates, visibleOnly: false)
         guard !paths.isEmpty else { return }
-        collectionView.reloadItems(at: Array(paths))
+        UIView.performWithoutAnimation {
+            collectionView.reloadItems(at: Array(paths))
+            collectionView.layoutIfNeeded()
+        }
     }
 
     public func isDateSelected(_ date: Date) -> Bool {
@@ -860,7 +861,7 @@ open class TFYSwiftCalendar: UIView {
     private func reloadVisibleDates() {
         let paths = collectionView.indexPathsForVisibleItems
         guard !paths.isEmpty else { return }
-        collectionView.reloadItems(at: paths)
+        reconfigureVisibleCells(at: Set(paths))
     }
 
     private func refreshDates(around date: Date) {
@@ -876,7 +877,23 @@ open class TFYSwiftCalendar: UIView {
             candidates.append(math.addingDays(1, to: date))
         }
         let paths = indexPaths(for: candidates, visibleOnly: true)
-        if !paths.isEmpty { collectionView.reloadItems(at: Array(paths)) }
+        reconfigureVisibleCells(at: paths)
+    }
+
+    private func reconfigureVisibleCells(at paths: Set<IndexPath>) {
+        guard !paths.isEmpty else { return }
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        UIView.performWithoutAnimation {
+            for path in paths {
+                guard let gridItem = item(at: path),
+                      let date = gridItem.date,
+                      let cell = collectionView.cellForItem(at: path) as? TFYSwiftCalendarCell else { continue }
+                configure(cell, for: date, gridItem: gridItem)
+                cell.layoutIfNeeded()
+            }
+        }
+        CATransaction.commit()
     }
 
     private func indexPaths(for dates: [Date], visibleOnly: Bool) -> Set<IndexPath> {
@@ -980,6 +997,15 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
         requestedCellIndexPath = nil
         let cell = customCell
             ?? collectionView.dequeueReusableCell(withReuseIdentifier: Self.defaultCellIdentifier, for: indexPath) as! TFYSwiftCalendarCell
+        configure(cell, for: date, gridItem: gridItem)
+        return cell
+    }
+
+    private func configure(
+        _ cell: TFYSwiftCalendarCell,
+        for date: Date,
+        gridItem: TFYSwiftCalendarGridItem
+    ) {
         let normalized = math.startOfDay(for: date)
         var state: TFYSwiftCalendarCellState = []
         if gridItem.monthPosition != .current { state.insert(.placeholder) }
@@ -1001,7 +1027,6 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
             defaultTitle: String(calendar.component(.day, from: normalized)),
             defaultAccessibilityLabel: accessibilityDateFormatter.string(from: normalized)
         )
-        return cell
     }
 
     public func collectionView(

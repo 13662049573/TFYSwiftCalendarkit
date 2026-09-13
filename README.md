@@ -6,7 +6,7 @@
 
 - Month and week scopes
 - Horizontal/vertical paging and compact continuous vertical scrolling
-- Configurable first weekday, locale, calendar, and time zone
+- Configurable first weekday, locale, calendar, time zone, and weekday-bar styling
 - None, head/tail, and fixed six-row placeholder modes
 - Single, multiple, swipe, and linked-range selection
 - Batched selection, optional selection limits, visible-date queries, and adjacent-month cell lookup
@@ -86,6 +86,26 @@ func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCale
 
 calendarView.appearance.borderWidth = 1
 calendarView.appearance.selectionBorderWidth = 2
+```
+
+The weekday bar supports custom symbols, VoiceOver names, per-day text/background colors,
+spacing, insets, borders, and rounded pill backgrounds. Arrays use Foundation weekday order
+(Sunday through Saturday) and are reordered automatically for `firstWeekday`.
+
+```swift
+calendarView.appearance.weekdaySymbols = ["日", "一", "二", "三", "四", "五", "六"]
+calendarView.appearance.weekdayTextColors = [
+    .systemRed, .secondaryLabel, .secondaryLabel, .secondaryLabel,
+    .secondaryLabel, .secondaryLabel, .systemRed
+]
+calendarView.appearance.weekdayLabelCornerRadius = 10
+calendarView.appearance.weekdaySpacing = 4
+calendarView.appearance.weekdayContentInsets = .init(top: 3, left: 8, bottom: 3, right: 8)
+
+calendarView.appearance.selectionAnimation = .scale // or .none
+calendarView.appearance.selectionAnimationScale = 0.96
+calendarView.appearance.selectionAnimationDuration = 0.16
+calendarView.invalidateAppearance()
 ```
 
 For a contiguous selection:
