@@ -40,16 +40,17 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
     internal func update(calendar: Calendar, locale: Locale, appearance: TFYSwiftCalendarAppearance) {
         var formatter = calendar
         formatter.locale = locale
-        let symbols = formatter.shortStandaloneWeekdaySymbols
-        guard symbols.count == 7 else { return }
+        let accessibilitySymbols = formatter.shortStandaloneWeekdaySymbols
+        let displaySymbols = appearance.caseOptions.contains(.weekdaySingleCharacter)
+            ? formatter.veryShortStandaloneWeekdaySymbols
+            : accessibilitySymbols
+        guard accessibilitySymbols.count == 7, displaySymbols.count == 7 else { return }
 
         let first = max(1, min(7, calendar.firstWeekday)) - 1
-        let ordered = Array(symbols[first...]) + Array(symbols[..<first])
-        for (label, original) in zip(weekdayLabels, ordered) {
-            var text = original
-            if appearance.caseOptions.contains(.weekdaySingleCharacter) {
-                text = text.first.map(String.init) ?? text
-            }
+        let orderedIndices = Array(first..<7) + Array(0..<first)
+        for (label, index) in zip(weekdayLabels, orderedIndices) {
+            let original = accessibilitySymbols[index]
+            var text = displaySymbols[index]
             if appearance.caseOptions.contains(.weekdayUppercase) {
                 text = text.uppercased(with: locale)
             }

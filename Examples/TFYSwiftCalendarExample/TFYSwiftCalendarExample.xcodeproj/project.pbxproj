@@ -12,6 +12,11 @@
 		65C3468E23504B16889D6C8D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 004B5326B3B98F6972992D05 /* AppDelegate.swift */; };
 		A11111111111111111111111 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A22222222222222222222222 /* SceneDelegate.swift */; };
 		A7BA21DF323AD2C648201C50 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8E8A044F4A5D2713A4721497 /* Foundation.framework */; };
+		B20000000000000000000001 /* DemoSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000001 /* DemoSupport.swift */; };
+		B20000000000000000000002 /* DemoMenuViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000002 /* DemoMenuViewController.swift */; };
+		B20000000000000000000003 /* SelectionDemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000003 /* SelectionDemos.swift */; };
+		B20000000000000000000004 /* LayoutDemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000004 /* LayoutDemos.swift */; };
+		B20000000000000000000005 /* ContentDemos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000005 /* ContentDemos.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -19,6 +24,11 @@
 		27913B6C264512A2F56EDFE4 /* CalendarDemoViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarDemoViewController.swift; sourceTree = "<group>"; };
 		A33333333333333333333333 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A22222222222222222222222 /* SceneDelegate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		B10000000000000000000001 /* DemoSupport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DemoSupport.swift; sourceTree = "<group>"; };
+		B10000000000000000000002 /* DemoMenuViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DemoMenuViewController.swift; sourceTree = "<group>"; };
+		B10000000000000000000003 /* SelectionDemos.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SelectionDemos.swift; sourceTree = "<group>"; };
+		B10000000000000000000004 /* LayoutDemos.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LayoutDemos.swift; sourceTree = "<group>"; };
+		B10000000000000000000005 /* ContentDemos.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ContentDemos.swift; sourceTree = "<group>"; };
 		8E8A044F4A5D2713A4721497 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		DEBA886F710CA014F9592114 /* TFYSwiftCalendarExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = TFYSwiftCalendarExample.app; path = TFYSwiftCalendarExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -74,7 +84,12 @@
 			children = (
 				004B5326B3B98F6972992D05 /* AppDelegate.swift */,
 				A22222222222222222222222 /* SceneDelegate.swift */,
+				B10000000000000000000002 /* DemoMenuViewController.swift */,
+				B10000000000000000000001 /* DemoSupport.swift */,
 				27913B6C264512A2F56EDFE4 /* CalendarDemoViewController.swift */,
+				B10000000000000000000003 /* SelectionDemos.swift */,
+				B10000000000000000000004 /* LayoutDemos.swift */,
+				B10000000000000000000005 /* ContentDemos.swift */,
 				A33333333333333333333333 /* Info.plist */,
 			);
 			name = TFYSwiftCalendarExample;
@@ -153,7 +168,12 @@
 			files = (
 				65C3468E23504B16889D6C8D /* AppDelegate.swift in Sources */,
 				A11111111111111111111111 /* SceneDelegate.swift in Sources */,
+				B20000000000000000000002 /* DemoMenuViewController.swift in Sources */,
+				B20000000000000000000001 /* DemoSupport.swift in Sources */,
 				3853842CC480B904444CA8FB /* CalendarDemoViewController.swift in Sources */,
+				B20000000000000000000003 /* SelectionDemos.swift in Sources */,
+				B20000000000000000000004 /* LayoutDemos.swift in Sources */,
+				B20000000000000000000005 /* ContentDemos.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

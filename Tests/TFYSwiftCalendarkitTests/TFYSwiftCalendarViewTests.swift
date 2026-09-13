@@ -122,6 +122,36 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertTrue(indicator.layer.sublayers?.isEmpty ?? true)
     }
 
+    func testChineseSingleCharacterWeekdaysRemainDistinct() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = Locale(identifier: "zh_CN")
+        calendar.firstWeekday = 2
+        let appearance = TFYSwiftCalendarAppearance()
+        appearance.caseOptions = [.weekdaySingleCharacter]
+        let weekdayView = TFYSwiftCalendarWeekdayView()
+
+        weekdayView.update(calendar: calendar, locale: Locale(identifier: "zh_CN"), appearance: appearance)
+
+        XCTAssertEqual(weekdayView.weekdayLabels.compactMap(\.text), ["一", "二", "三", "四", "五", "六", "日"])
+    }
+
+    func testCustomCellsCanBeDequeuedForBoundaryPlaceholders() {
+        let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
+        view.calendar = systemCalendar
+        view.configuredDateRange = date(2024, 5, 1)...date(2024, 5, 31)
+        view.placeholderType = .fillHeadTail
+        view.register(TestCalendarCell.self, forCellReuseIdentifier: "custom")
+        let source = CustomCellDataSource()
+        view.dataSource = source
+        view.reloadData()
+        view.setCurrentPage(date(2024, 5, 1), animated: false)
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+
+        XCTAssertGreaterThan(source.dequeuedCellCount, 0)
+        XCTAssertTrue(view.visibleCells.contains { $0 is TestCalendarCell })
+    }
+
     private func makeCalendarView() -> TFYSwiftCalendar {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
         view.calendar = systemCalendar
@@ -159,5 +189,22 @@ private final class DataSourceStub: TFYSwiftCalendarDataSource {
 
     func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
         TFYSwiftCalendarDayContent(subtitle: "Event")
+    }
+}
+
+@MainActor
+private final class TestCalendarCell: TFYSwiftCalendarCell {}
+
+@MainActor
+private final class CustomCellDataSource: TFYSwiftCalendarDataSource {
+    var dequeuedCellCount = 0
+
+    func calendar(
+        _ calendar: TFYSwiftCalendar,
+        cellFor date: Date,
+        at monthPosition: TFYSwiftCalendarMonthPosition
+    ) -> TFYSwiftCalendarCell? {
+        dequeuedCellCount += 1
+        return calendar.dequeueReusableCell(withIdentifier: "custom", for: date, at: monthPosition)
     }
 }

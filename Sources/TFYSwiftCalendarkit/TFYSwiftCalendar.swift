@@ -141,6 +141,7 @@ open class TFYSwiftCalendar: UIView {
     private var lastLaidOutSize = CGSize.zero
     private var isApplyingCalendarConfiguration = false
     private var lastSwipeSelectedKey: TFYSwiftCalendarDayKey?
+    private var requestedCellIndexPath: IndexPath?
 
     private let accessibilityDateFormatter = DateFormatter()
 
@@ -408,7 +409,7 @@ open class TFYSwiftCalendar: UIView {
         for date: Date,
         at monthPosition: TFYSwiftCalendarMonthPosition
     ) -> TFYSwiftCalendarCell {
-        guard let indexPath = indexPath(for: date) else {
+        guard let indexPath = requestedCellIndexPath ?? indexPath(for: date) else {
             preconditionFailure("The requested date is outside the configured calendar range.")
         }
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: identifier, for: indexPath) as? TFYSwiftCalendarCell else {
@@ -676,7 +677,10 @@ extension TFYSwiftCalendar: UICollectionViewDataSource, UICollectionViewDelegate
             return collectionView.dequeueReusableCell(withReuseIdentifier: Self.blankCellIdentifier, for: indexPath)
         }
 
-        let cell = dataSource?.calendar(self, cellFor: date, at: gridItem.monthPosition)
+        requestedCellIndexPath = indexPath
+        let customCell = dataSource?.calendar(self, cellFor: date, at: gridItem.monthPosition)
+        requestedCellIndexPath = nil
+        let cell = customCell
             ?? collectionView.dequeueReusableCell(withReuseIdentifier: Self.defaultCellIdentifier, for: indexPath) as! TFYSwiftCalendarCell
         let normalized = math.startOfDay(for: date)
         var state: TFYSwiftCalendarCellState = []

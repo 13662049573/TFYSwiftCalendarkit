@@ -113,7 +113,7 @@ struct ContentView: View {
 
 ## Example and tests
 
-- Open `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` to run the example app.
+- Open `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` to run the example app. Its menu contains 11 complete UIKit and SwiftUI demonstrations, including range selection, EventKit, custom cells, month/week transitions, continuous scrolling, and per-date appearance.
 - Open the repository folder in Xcode to edit the Swift Package.
 - Run `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,name=iPhone 17' test` for the test suite.
 

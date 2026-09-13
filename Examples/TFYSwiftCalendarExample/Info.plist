@@ -20,6 +20,10 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCalendarsUsageDescription</key>
+	<string>用于在日历示例中显示设备上的日程事件。</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>用于在日历示例中读取并展示设备上的日程事件。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
