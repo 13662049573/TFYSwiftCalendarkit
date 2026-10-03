@@ -43,6 +43,8 @@ pod trunk push TFYSwiftCalendarkit.podspec --allow-warnings
 
 发布需要有效的 CocoaPods trunk 会话且账号具有该 Pod 的发布权限。发布后检查 trunk 的版本记录，并在干净消费者工程使用 `pod 'TFYSwiftCalendarkit', '2.0.0'` 验证可解析和构建；以成功解析的精确版本证明发布结果。CocoaPods CDN 收录可能晚于 trunk 接受，未收录时继续等待，避免重复发布。
 
+严格构建同时指定 `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO`，避免某些 Xcode 自动对包依赖抑制警告时出现参数冲突。
+
 SPM 不需要额外上传：GitHub 的有效版本标签提供包版本，但仍应在独立的 iOS 16 消费者工程验证精确 `2.0.0` 可解析与构建。最低系统构建检查不等同于 iOS 16 真机运行验收。
 
 完整行为约定与验收边界见 [质量评估](QUALITY_REVIEW.md)；本地构建命令见 [Contributing](../CONTRIBUTING.md)。

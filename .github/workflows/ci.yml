@@ -50,7 +50,7 @@ jobs:
           -scheme TFYSwiftCalendarkit
           -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}'
           -derivedDataPath /tmp/TFYCalendarPackageCI
-          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO
       - name: Build example
         run: >-
           xcodebuild build
@@ -59,7 +59,7 @@ jobs:
           -destination 'generic/platform=iOS Simulator'
           -derivedDataPath /tmp/TFYCalendarExampleCI
           CODE_SIGNING_ALLOWED=NO
-          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+          SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'

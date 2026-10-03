@@ -15,13 +15,13 @@ Discover a simulator with `xcrun simctl list devices available` and substitute i
 xcodebuild test -scheme TFYSwiftCalendarkit \
   -destination 'platform=iOS Simulator,id=<UUID>' \
   -derivedDataPath /tmp/TFYCalendarChecks \
-  SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+  SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO
 
 xcodebuild build \
   -project Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj \
   -scheme TFYSwiftCalendarExample \
   -destination 'generic/platform=iOS Simulator' \
-  CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+  CODE_SIGNING_ALLOWED=NO SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO
 ```
 
 Serialize checks against one DerivedData directory. If a failed run leaves a test process alive, finish or terminate that run before starting the next build.
@@ -43,3 +43,5 @@ Security issues should be reported according to [SECURITY.md](SECURITY.md), not 
 Run `python3 Scripts/validate_release_metadata.py` before committing a release. The script checks Pod/SPM minimum versions, SwiftUI availability, example versions and documentation. CI repeats these checks on main, pull requests, version tags and published GitHub Releases, using an available runner simulator instead of a fixed device/Xcode path.
 
 For tag validation use `python3 Scripts/validate_release_metadata.py --tag 2.0.0`. The Pod source expects the exact numeric version tag. Follow [2.0.0 release instructions](Documentation/RELEASE_2.0.0.md) before publishing to CocoaPods.
+
+Explicitly set `SWIFT_SUPPRESS_WARNINGS=NO` alongside warnings-as-errors: some Xcode versions suppress warnings for package dependencies in an app build, and the Swift compiler rejects both options together. CI keeps warnings visible instead of relaxing validation.
