@@ -22,9 +22,26 @@
 | 独立 SPM 项目精确版本解析 | `2.0.0`，提交与标签一致 |
 | 独立 SPM 项目构建与运行 | 通过；中文按钮/选中状态资源加载通过 |
 | 官方 Pod 规格的独立项目构建与运行 | 通过；实际从标签下载的 16 个源码/资源文件与标签一致，中文资源加载通过 |
-| 标准 CDN 精确版本安装与构建 | 等待 CDN 索引同步，尚未完成 |
+| 标准 CDN 精确版本安装 | 通过；普通版本声明解析为 `2.0.0`，`Podfile.lock` 来源为官方 trunk，无外部规格覆盖 |
+| 标准 CDN 独立项目构建与运行 | 通过；Swift 警告作为错误，实际显示日历及 2 个连选日期，中文按钮/选中状态资源加载通过 |
+| 标准 CDN 下载内容一致性 | 官方规格一致；16 个源码/资源文件逐一与正式标签一致 |
 
 独立项目最低编译目标均为 iOS 16.0，运行环境为 Xcode 27.0 / iPhone 18 Pro Max / iOS 27.0。GitHub CI 使用 Xcode 16.4。
+
+标准 CDN 验收于 `2026-10-03 14:02 UTC` 完成。独立项目使用以下普通版本声明，通过 `pod install --repo-update` 安装；未使用本地路径、Git 源或直接 Pod 规格替代 CDN 解析：
+
+```ruby
+source 'https://cdn.cocoapods.org/'
+platform :ios, '16.0'
+
+target 'CalendarConsumer' do
+  pod 'TFYSwiftCalendarkit', '2.0.0'
+end
+```
+
+锁定版本为 `2.0.0`，规格校验值为 `3b0f0ed3602bca18b520e2aed30aa89f6ecd5fe6`。构建设置为 `SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO`。本机 Xcode 的 Metal 工具链路径和无 AppIntents 依赖的元数据提取提示仍存在，但无 Swift 编译警告，构建及实际运行成功。
+
+[维护文档提交 5028f09 的 CI](https://github.com/13662049573/TFYSwiftCalendarkit/actions/runs/37123336906) 亦已成功。
 
 ## 本次复查的补充
 
@@ -34,4 +51,4 @@
 
 已确认的问题及修复证据见 [质量评估](QUALITY_REVIEW.md)。本次复查未发现新的组件发布阻断问题，不代表所有潜在问题均已消除。iOS 16 真机运行、真实用户事件数据、完整手动 VoiceOver / Dynamic Type 及设备性能验收仍需在业务集成环境完成。
 
-目前 SPM 与 trunk / 官方 Specs 已发布；标准 CocoaPods CDN 索引验收仍在跟进，不能将它与上传成功混为一谈。无需再次上传同一版本。
+GitHub Release、SPM 与 CocoaPods trunk / 官方 Specs 已发布，标准 CocoaPods CDN 精确版本解析、独立项目构建与运行验收均已完成。未重复上传 `2.0.0`，未改写正式标签或 Release。
