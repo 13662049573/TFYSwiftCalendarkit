@@ -86,7 +86,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         let bounds = contentView.bounds
         let centerY = bounds.midY
         let titleHeight = min(24, bounds.height * 0.42)
-        let side = min(bounds.width, bounds.height) - 4
+        let side = max(0, min(bounds.width, bounds.height) - 4)
         let shapeRect = CGRect(
             x: bounds.midX - side / 2,
             y: bounds.midY - side / 2,
@@ -112,14 +112,14 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         let preferredTitleY = centerY - titleHeight / 2
         let titleY = min(preferredTitleY, max(1, titleUpperBound - titleHeight))
 
-        titleLabel.frame = CGRect(x: 3, y: titleY, width: bounds.width - 6, height: titleHeight)
+        titleLabel.frame = CGRect(x: 3, y: titleY, width: max(0, bounds.width - 6), height: titleHeight)
             .offsetBy(dx: (appliedStyle.titleOffset?.x ?? appliedAppearance?.titleOffset.x ?? 0) + (appliedAppearance?.horizontalTitleInset ?? 0),
                       dy: appliedStyle.titleOffset?.y ?? appliedAppearance?.titleOffset.y ?? 0)
 
-        topSubtitleLabel.frame = CGRect(x: 2, y: 1, width: bounds.width - 4, height: auxiliaryHeight)
+        topSubtitleLabel.frame = CGRect(x: 2, y: 1, width: max(0, bounds.width - 4), height: auxiliaryHeight)
             .offsetBy(dx: appliedStyle.topSubtitleOffset?.x ?? appliedAppearance?.topSubtitleOffset.x ?? 0,
                       dy: appliedStyle.topSubtitleOffset?.y ?? appliedAppearance?.topSubtitleOffset.y ?? 0)
-        subtitleLabel.frame = CGRect(x: 2, y: accessoryY, width: bounds.width - 4, height: auxiliaryHeight)
+        subtitleLabel.frame = CGRect(x: 2, y: accessoryY, width: max(0, bounds.width - 4), height: auxiliaryHeight)
             .offsetBy(dx: appliedStyle.subtitleOffset?.x ?? appliedAppearance?.subtitleOffset.x ?? 0,
                       dy: appliedStyle.subtitleOffset?.y ?? appliedAppearance?.subtitleOffset.y ?? 0)
 
@@ -135,7 +135,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         )
             .offsetBy(dx: appliedStyle.imageOffset?.x ?? appliedAppearance?.imageOffset.x ?? 0,
                       dy: appliedStyle.imageOffset?.y ?? appliedAppearance?.imageOffset.y ?? 0)
-        eventIndicator.frame = CGRect(x: 2, y: eventY, width: bounds.width - 4, height: eventHeight)
+        eventIndicator.frame = CGRect(x: 2, y: eventY, width: max(0, bounds.width - 4), height: eventHeight)
             .offsetBy(dx: appliedStyle.eventOffset?.x ?? appliedAppearance?.eventOffset.x ?? 0,
                       dy: appliedStyle.eventOffset?.y ?? appliedAppearance?.eventOffset.y ?? 0)
 
@@ -170,7 +170,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
             : (appliedStyle.borderWidth ?? appearance.borderWidth)
         shapeLayer.fillColor = fill.resolvedColor(with: traitCollection).cgColor
         shapeLayer.strokeColor = border.resolvedColor(with: traitCollection).cgColor
-        shapeLayer.lineWidth = max(0, borderWidth)
+        shapeLayer.lineWidth = TFYSwiftCalendarGeometry.nonnegative(borderWidth)
         rowSeparatorLayer.backgroundColor = appearance.separatorColor.resolvedColor(with: traitCollection).cgColor
         rowSeparatorLayer.isHidden = appearance.separatorStyle == .none
 
@@ -192,7 +192,8 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         style: TFYSwiftCalendarDayStyle,
         appearance: TFYSwiftCalendarAppearance,
         defaultTitle: String,
-        defaultAccessibilityLabel: String
+        defaultAccessibilityLabel: String,
+        locale: Locale = .current
     ) {
         representedDate = date
         self.monthPosition = monthPosition
@@ -219,20 +220,22 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         accessibilityTraits = traits
         var values: [String] = []
         if state.contains(.today) {
-            values.append(TFYSwiftCalendarLocalization.string("Today", comment: "Calendar cell accessibility value"))
+            values.append(TFYSwiftCalendarLocalization.string("Today", locale: locale, comment: "Calendar cell accessibility value"))
         }
         if state.contains(.selected) {
-            values.append(TFYSwiftCalendarLocalization.string("Selected", comment: "Calendar cell accessibility value"))
+            values.append(TFYSwiftCalendarLocalization.string("Selected", locale: locale, comment: "Calendar cell accessibility value"))
         }
         if state.contains(.disabled) {
-            values.append(TFYSwiftCalendarLocalization.string("Unavailable", comment: "Calendar cell accessibility value"))
+            values.append(TFYSwiftCalendarLocalization.string("Unavailable", locale: locale, comment: "Calendar cell accessibility value"))
         }
-        if !content.eventColors.isEmpty {
+        let effectiveEvents = (state.contains(.selected) ? style.selectionEventColors : style.eventColors) ?? content.eventColors
+        if !effectiveEvents.isEmpty {
             let format = TFYSwiftCalendarLocalization.string(
                 "%ld events",
+                locale: locale,
                 comment: "Calendar cell accessibility event count"
             )
-            values.append(String.localizedStringWithFormat(format, content.eventColors.count))
+            values.append(String.localizedStringWithFormat(format, effectiveEvents.count))
         }
         accessibilityValue = values.isEmpty ? nil : values.joined(separator: ", ")
         configureAppearance()
@@ -245,8 +248,8 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
             transform = .identity
             return
         }
-        let scale = max(0.8, min(1, appearance.selectionAnimationScale))
-        let duration = max(0, appearance.selectionAnimationDuration)
+        let scale = max(0.8, min(1, TFYSwiftCalendarGeometry.nonnegative(appearance.selectionAnimationScale, fallback: 1)))
+        let duration = appearance.selectionAnimationDuration.isFinite ? max(0, appearance.selectionAnimationDuration) : 0
         guard scale < 1, duration > 0 else {
             transform = .identity
             return
@@ -273,7 +276,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
 
     private func selectionPath(in baseRect: CGRect) -> UIBezierPath {
         guard let appearance = appliedAppearance else { return UIBezierPath(rect: baseRect) }
-        let radiusFactor = max(0, min(1, appliedStyle.borderRadius ?? appearance.borderRadius))
+        let radiusFactor = min(1, TFYSwiftCalendarGeometry.nonnegative(appliedStyle.borderRadius ?? appearance.borderRadius, fallback: 1))
         let fillType = appliedStyle.fillType ?? appearance.fillType
         guard fillType == .linked, selectionPosition != .none else {
             return UIBezierPath(roundedRect: baseRect, cornerRadius: min(baseRect.width, baseRect.height) * 0.5 * radiusFactor)
@@ -287,7 +290,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         case .left:
             return UIBezierPath(
                 roundedRect: linkedRect,
-                byRoundingCorners: [.topLeft, .bottomLeft],
+                byRoundingCorners: effectiveUserInterfaceLayoutDirection == .rightToLeft ? [.topRight, .bottomRight] : [.topLeft, .bottomLeft],
                 cornerRadii: CGSize(width: radius, height: radius)
             )
         case .middle:
@@ -295,7 +298,7 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         case .right:
             return UIBezierPath(
                 roundedRect: linkedRect,
-                byRoundingCorners: [.topRight, .bottomRight],
+                byRoundingCorners: effectiveUserInterfaceLayoutDirection == .rightToLeft ? [.topLeft, .bottomLeft] : [.topRight, .bottomRight],
                 cornerRadii: CGSize(width: radius, height: radius)
             )
         case .none:

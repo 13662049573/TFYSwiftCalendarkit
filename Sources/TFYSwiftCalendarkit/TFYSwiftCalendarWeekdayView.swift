@@ -59,13 +59,8 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
         guard accessibilitySymbols.count == 7, displaySymbols.count == 7 else { return }
 
         backgroundColor = appearance.weekdayBackgroundColor
-        requestedSpacing = max(0, appearance.weekdaySpacing)
-        requestedContentInsets = UIEdgeInsets(
-            top: max(0, appearance.weekdayContentInsets.top),
-            left: max(0, appearance.weekdayContentInsets.left),
-            bottom: max(0, appearance.weekdayContentInsets.bottom),
-            right: max(0, appearance.weekdayContentInsets.right)
-        )
+        requestedSpacing = TFYSwiftCalendarGeometry.nonnegative(appearance.weekdaySpacing)
+        requestedContentInsets = TFYSwiftCalendarGeometry.insets(appearance.weekdayContentInsets)
         applyLayoutMetrics()
 
         let textColors = validated(appearance.weekdayTextColors)
@@ -82,9 +77,9 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
             label.font = appearance.weekdayFont
             label.textColor = textColors?[index] ?? appearance.weekdayTextColor
             label.backgroundColor = backgroundColors?[index] ?? appearance.weekdayLabelBackgroundColor
-            label.layer.cornerRadius = max(0, appearance.weekdayLabelCornerRadius)
+            label.layer.cornerRadius = TFYSwiftCalendarGeometry.nonnegative(appearance.weekdayLabelCornerRadius)
             label.layer.cornerCurve = .continuous
-            label.layer.borderWidth = max(0, appearance.weekdayLabelBorderWidth)
+            label.layer.borderWidth = TFYSwiftCalendarGeometry.nonnegative(appearance.weekdayLabelBorderWidth)
             label.layer.borderColor = appearance.weekdayLabelBorderColor
                 .resolvedColor(with: traitCollection)
                 .cgColor

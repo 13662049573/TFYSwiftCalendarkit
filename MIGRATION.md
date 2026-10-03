@@ -37,3 +37,13 @@
 6. Remove the old dependency after all screens are migrated.
 
 No bridging header is required by the new library.
+
+## Upgrading from 1.1.0 to 2.0.0
+
+- Set the application deployment target to iOS 16 or later before resolving the new package/Pod version. Apps retaining iOS 15 support must stay on 1.1.0.
+- Update SPM to `from: "2.0.0"` or CocoaPods to `~> 2.0.0`.
+- Existing delegates remain source compatible: `calendarSelectionDidChange(_:)` has a default implementation. Implement it to observe completed selections and configuration pruning.
+- SwiftUI no longer enables multiple selection implicitly. Set `allowsMultipleSelection = true` explicitly in `configure` when needed.
+- Binding values are reconciled after the view update; invalid, duplicate and excess days become the effective selection.
+- The default 1970–2099 range uses Gregorian civil years even when another calendar identifier is displayed.
+- `preferredHeight` now includes top/bottom section insets and continuous sticky-header height. Recompute any fixed height derived from it.

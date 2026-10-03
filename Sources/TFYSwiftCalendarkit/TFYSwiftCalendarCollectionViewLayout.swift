@@ -7,7 +7,10 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
     }
 
     public var sectionInsets: UIEdgeInsets = .zero {
-        didSet { invalidateMetrics() }
+        didSet {
+            sectionInsets = TFYSwiftCalendarGeometry.insets(sectionInsets)
+            invalidateMetrics()
+        }
     }
 
     internal var continuousRowHeight = TFYSwiftCalendarDefaults.rowHeight {
@@ -37,6 +40,7 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
     private var sectionMetrics: [SectionMetric] = []
     private var calculatedContentSize = CGSize.zero
     private var metricsAreDirty = true
+    private var isRightToLeft = false
 
     private var usesContinuousVerticalLayout: Bool {
         scrollDirection == .vertical && collectionView?.isPagingEnabled == false
@@ -47,9 +51,11 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
         guard let collectionView else { return }
         let newPageSize = collectionView.bounds.size
         let newSectionCount = collectionView.numberOfSections
-        if newPageSize != pageSize || newSectionCount != sectionCount {
+        let newIsRightToLeft = collectionView.effectiveUserInterfaceLayoutDirection == .rightToLeft
+        if newPageSize != pageSize || newSectionCount != sectionCount || newIsRightToLeft != isRightToLeft {
             metricsAreDirty = true
         }
+        isRightToLeft = newIsRightToLeft
         pageSize = newPageSize
         sectionCount = newSectionCount
 
@@ -82,7 +88,8 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
     }
 
     public override func layoutAttributesForElements(in rect: CGRect) -> [UICollectionViewLayoutAttributes]? {
-        guard let collectionView, sectionCount > 0, pageSize.width > 0, pageSize.height > 0 else { return [] }
+        guard let collectionView, sectionCount > 0, pageSize.width > 0, pageSize.height > 0,
+              rect.minX.isFinite, rect.maxX.isFinite, rect.minY.isFinite, rect.maxY.isFinite else { return [] }
         let sections: [Int]
         if usesContinuousVerticalLayout {
             sections = continuousSections(intersecting: rect)
@@ -90,9 +97,11 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
             let pageLength = scrollDirection == .horizontal ? pageSize.width : pageSize.height
             let lower = scrollDirection == .horizontal ? rect.minX : rect.minY
             let upper = scrollDirection == .horizontal ? rect.maxX : rect.maxY
-            let first = max(0, min(sectionCount - 1, Int(floor(lower / pageLength))))
-            let last = max(first, min(sectionCount - 1, Int(floor(max(0, upper - 0.5) / pageLength))))
-            sections = Array(first...last)
+            let first = Int(min(CGFloat(sectionCount - 1), max(0, floor(lower / pageLength))))
+            let last = max(first, Int(min(CGFloat(sectionCount - 1), max(0, floor(max(0, upper - 0.5) / pageLength)))))
+            sections = Array(first...last).map { physicalSection in
+                scrollDirection == .horizontal && isRightToLeft ? sectionCount - 1 - physicalSection : physicalSection
+            }
         }
         var result: [UICollectionViewLayoutAttributes] = []
         for section in sections {
@@ -117,13 +126,17 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
     }
 
     public override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
-        guard let collectionView, pageSize.width > 0, pageSize.height > 0 else { return nil }
+        guard let collectionView, pageSize.width > 0, pageSize.height > 0,
+              indexPath.section >= 0, indexPath.section < sectionCount, indexPath.item >= 0 else { return nil }
         let itemCount = collectionView.numberOfItems(inSection: indexPath.section)
         guard indexPath.item < itemCount else { return nil }
 
-        let rows = max(1, rowCountProvider?(indexPath.section) ?? Int(ceil(Double(itemCount) / 7.0)))
+        let rows = usesContinuousVerticalLayout && sectionMetrics.indices.contains(indexPath.section)
+            ? sectionMetrics[indexPath.section].rows
+            : max(1, rowCountProvider?(indexPath.section) ?? Int(ceil(Double(itemCount) / 7.0)))
         let usableWidth = max(0, pageSize.width - sectionInsets.left - sectionInsets.right)
-        let column = indexPath.item % 7
+        let logicalColumn = indexPath.item % 7
+        let column = isRightToLeft ? 6 - logicalColumn : logicalColumn
         let row = indexPath.item / 7
         let columnWidth = usableWidth / 7
         let rowHeight: CGFloat
@@ -134,7 +147,7 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
         } else if scrollDirection == .horizontal {
             let usableHeight = max(0, pageSize.height - sectionInsets.top - sectionInsets.bottom)
             rowHeight = usableHeight / CGFloat(rows)
-            pageOrigin = CGPoint(x: CGFloat(indexPath.section) * pageSize.width, y: 0)
+            pageOrigin = CGPoint(x: horizontalOffset(forSection: indexPath.section), y: 0)
         } else {
             let usableHeight = max(0, pageSize.height - sectionInsets.top - sectionInsets.bottom)
             rowHeight = usableHeight / CGFloat(rows)
@@ -239,7 +252,19 @@ public final class TFYSwiftCalendarCollectionViewLayout: UICollectionViewLayout 
         return min(max(0, lower - 1), sectionMetrics.count - 1)
     }
 
-    public override var flipsHorizontallyInOppositeLayoutDirection: Bool { true }
+    // Mirror both columns and pages explicitly so offsets, hit testing and page callbacks agree.
+    public override var flipsHorizontallyInOppositeLayoutDirection: Bool { false }
+
+    internal func horizontalOffset(forSection section: Int) -> CGFloat {
+        let physicalSection = isRightToLeft ? sectionCount - 1 - section : section
+        return CGFloat(physicalSection) * pageSize.width
+    }
+
+    internal func section(atHorizontalOffset offset: CGFloat) -> Int {
+        guard pageSize.width > 0, sectionCount > 0, offset.isFinite else { return 0 }
+        let physicalSection = Int(min(CGFloat(sectionCount - 1), max(0, round(offset / pageSize.width))))
+        return isRightToLeft ? sectionCount - 1 - physicalSection : physicalSection
+    }
 
     internal func invalidateDataSourceMetrics() {
         invalidateMetrics()

@@ -31,8 +31,8 @@ public final class TFYSwiftCalendarHeaderView: UIView {
         titleLabel.accessibilityTraits = .header
 
         let symbolConfiguration = UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)
-        previousButton.setImage(UIImage(systemName: "chevron.left", withConfiguration: symbolConfiguration), for: .normal)
-        nextButton.setImage(UIImage(systemName: "chevron.right", withConfiguration: symbolConfiguration), for: .normal)
+        previousButton.setImage(UIImage(systemName: "chevron.left", withConfiguration: symbolConfiguration)?.imageFlippedForRightToLeftLayoutDirection(), for: .normal)
+        nextButton.setImage(UIImage(systemName: "chevron.right", withConfiguration: symbolConfiguration)?.imageFlippedForRightToLeftLayoutDirection(), for: .normal)
         previousButton.accessibilityLabel = TFYSwiftCalendarLocalization.string(
             "Previous page",
             comment: "Calendar previous page"
@@ -54,8 +54,9 @@ public final class TFYSwiftCalendarHeaderView: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         let buttonWidth = min(44, bounds.width * 0.16)
-        previousButton.frame = CGRect(x: 0, y: 0, width: buttonWidth, height: bounds.height)
-        nextButton.frame = CGRect(x: bounds.width - buttonWidth, y: 0, width: buttonWidth, height: bounds.height)
+        let rtl = effectiveUserInterfaceLayoutDirection == .rightToLeft
+        previousButton.frame = CGRect(x: rtl ? bounds.width - buttonWidth : 0, y: 0, width: buttonWidth, height: bounds.height)
+        nextButton.frame = CGRect(x: rtl ? 0 : bounds.width - buttonWidth, y: 0, width: buttonWidth, height: bounds.height)
         titleLabel.frame = CGRect(x: buttonWidth, y: 0, width: bounds.width - buttonWidth * 2, height: bounds.height)
     }
 
@@ -67,6 +68,8 @@ public final class TFYSwiftCalendarHeaderView: UIView {
         canGoPrevious: Bool,
         canGoNext: Bool
     ) {
+        previousButton.accessibilityLabel = TFYSwiftCalendarLocalization.string("Previous page", locale: locale, comment: "Calendar previous page")
+        nextButton.accessibilityLabel = TFYSwiftCalendarLocalization.string("Next page", locale: locale, comment: "Calendar next page")
         formatter.calendar = calendar
         formatter.locale = locale
         formatter.timeZone = calendar.timeZone

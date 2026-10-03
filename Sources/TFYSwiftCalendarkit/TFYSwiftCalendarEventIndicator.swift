@@ -6,6 +6,8 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
         didSet { setNeedsLayout() }
     }
 
+    /// Retained for source compatibility. Each event uses its explicit entry in `colors`.
+    /// 兼容保留属性；事件点实际使用 `colors` 中显式提供的颜色。
     public var fallbackColor: UIColor = .systemBlue {
         didSet { setNeedsLayout() }
     }

@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.0.0
+
+- **Breaking compatibility:** raised the minimum deployment target from iOS 15 to iOS 16 across SPM, CocoaPods, SwiftUI and the example app.
+
+- Fixed leap-month date identity and ordering; kept the default range in Gregorian civil years across calendar identifiers.
+- Preserved focused/selected days through month/week changes and page alignment through runtime layout changes.
+- Sanitized invalid geometry, protected invalid item lookups, and included insets/sticky headers in preferred height.
+- Made SwiftUI obey selection configuration, defer binding reconciliation, and cancel stale updates on replacement/dismantle.
+- Added calendarSelectionDidChange for final selections, including range and selection-limit pruning.
+- Streamed range candidates with early selection-limit termination and cached page counts/continuous row metrics.
+- Unified RTL page offsets and columns; mirrored navigation controls and linked-range ends.
+- Synchronized all visible copies of selected dates, disconnected links into hidden placeholders, and restored navigation for repeated selections.
+- Localized accessibility states and day numbers according to the component locale; refreshed visible sticky-header appearance.
+- Fixed midnight/last-day EventKit boundaries and cleared demo event data when permission is denied.
+- Added 20 regression tests and a Chinese quality/risk review with explicit integration contracts.
+
 ## 1.1.0
 
 - Added batch selection, maximum-selection limits, selected/visible date queries, and explicit adjacent-month cell/frame lookup.

@@ -1,6 +1,6 @@
 # Example app
 
-Open `TFYSwiftCalendarExample.xcodeproj`, select an iOS simulator, and run the `TFYSwiftCalendarExample` scheme. The app links the package from the repository root and has no CocoaPods dependencies.
+Open `TFYSwiftCalendarExample.xcodeproj`, select an iOS simulator, and run the `TFYSwiftCalendarExample` scheme. Version 2.0.0 requires iOS 16 or later and Swift 6 / Xcode 16 or later. The app links the package from the repository root and has no CocoaPods dependencies.
 
 The menu contains runnable, pure-Swift examples for:
 

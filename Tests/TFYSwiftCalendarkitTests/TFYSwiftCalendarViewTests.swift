@@ -541,6 +541,191 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
         XCTAssertEqual(source.dequeuedCellCount, dequeueCount)
     }
 
+
+    func testDefaultRangeKeepsGregorianYearsWhenUsingChineseCalendar() {
+        let view = TFYSwiftCalendar()
+        var chinese = Calendar(identifier: .chinese)
+        chinese.timeZone = systemCalendar.timeZone
+        view.calendar = chinese
+        XCTAssertEqual(systemCalendar.component(.year, from: view.minimumDate), 1970)
+        XCTAssertEqual(systemCalendar.component(.year, from: view.maximumDate), 2099)
+    }
+
+    func testScopeSwitchPreservesRequestedDayAndSelectedWeek() {
+        let view = makeCalendarView()
+        let requested = date(2024, 5, 22)
+        view.setCurrentPage(requested, animated: false)
+        view.setScope(.week, animated: false)
+        XCTAssertTrue(view.calendar.isDate(view.currentPage, equalTo: requested, toGranularity: .weekOfYear))
+        view.selectDate(date(2024, 5, 24), scrollToDate: false)
+        view.setScope(.month, animated: false)
+        view.setScope(.week, animated: false)
+        XCTAssertTrue(view.calendar.isDate(view.currentPage, equalTo: requested, toGranularity: .weekOfYear))
+    }
+
+    func testLayoutModeChangesKeepCurrentPageAligned() {
+        let view = makeCalendarView()
+        view.scrollDirection = .vertical
+        view.layoutIfNeeded()
+        XCTAssertEqual(view.collectionView.contentOffset.y, view.collectionView.bounds.height * 4, accuracy: 0.1)
+        view.pagingEnabled = false
+        view.rowHeight = 50
+        view.continuousSectionHeaderHeight = 44
+        view.sectionInsets = UIEdgeInsets(top: 8, left: 4, bottom: 8, right: 4)
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+        XCTAssertEqual(view.collectionView.contentOffset.y, (300 + 44 + 16) * 4, accuracy: 0.1)
+        XCTAssertEqual(view.calendar.component(.month, from: view.currentPage), 5)
+    }
+
+    func testReselectingDateCanNavigateBackToItsPage() {
+        let view = makeCalendarView()
+        let selected = date(2024, 5, 11)
+        view.selectDate(selected, scrollToDate: false)
+        view.setCurrentPage(date(2024, 9, 1), animated: false)
+        view.selectDate(selected, scrollToDate: true)
+        XCTAssertEqual(view.calendar.component(.month, from: view.currentPage), 5)
+    }
+
+    func testDisabledSelectionRejectsUserDeselection() {
+        let view = makeCalendarView()
+        view.selectDate(date(2024, 5, 11), scrollToDate: false)
+        view.allowsSelection = false
+        let path = IndexPath(item: 12, section: 4) // May 11 with Monday first
+        XCTAssertFalse(view.collectionView(view.collectionView, shouldDeselectItemAt: path))
+    }
+
+    func testInvalidLayoutMetricsAreSanitized() {
+        let view = makeCalendarView()
+        view.headerHeight = -10
+        view.weekdayHeight = .nan
+        view.rowHeight = -.infinity
+        view.continuousSectionHeaderHeight = .infinity
+        view.sectionInsets = UIEdgeInsets(top: -50, left: .nan, bottom: 0, right: 0)
+        view.layoutIfNeeded()
+        XCTAssertGreaterThanOrEqual(view.preferredHeight, 0)
+        XCTAssertTrue(view.preferredHeight.isFinite)
+        XCTAssertTrue(view.collectionView.frame.width.isFinite)
+        XCTAssertEqual(view.headerHeight, 0)
+        XCTAssertEqual(view.sectionInsets.top, 0)
+        XCTAssertEqual(view.sectionInsets.left, 0)
+    }
+
+    func testRangeSelectionStopsAtLimitWithoutCheckingEveryDay() {
+        let view = makeCalendarView()
+        let spy = DelegateSpy()
+        view.delegate = spy
+        view.maximumSelectedDates = 3
+        view.selectDates(from: date(2024, 1, 1), through: date(2024, 12, 31), scrollToLastDate: false)
+        XCTAssertEqual(view.selectedDates.count, 3)
+        XCTAssertEqual(spy.selectionRequestCount, 4)
+        XCTAssertEqual(spy.selectionChangeCount, 1)
+        XCTAssertEqual(spy.reachedSelectionLimits, [3])
+    }
+
+    func testSelectionChangeCallbackReportsFinalReplacementAndRangePruning() {
+        let view = makeCalendarView()
+        let spy = DelegateSpy()
+        view.delegate = spy
+        view.allowsMultipleSelection = true
+        view.selectDates([date(2024, 5, 1), date(2024, 5, 2)])
+        XCTAssertEqual(spy.selectionChangeCount, 1)
+        view.selectDates([date(2024, 6, 1), date(2024, 6, 2)], replacingCurrentSelection: true)
+        XCTAssertEqual(spy.selectionChangeCount, 2)
+        XCTAssertEqual(spy.lastSelection, view.selectedDates)
+        view.configuredDateRange = date(2024, 1, 1)...date(2024, 5, 31)
+        XCTAssertEqual(spy.selectionChangeCount, 3)
+        XCTAssertEqual(spy.lastSelection, [])
+    }
+
+    func testChineseLeapMonthRangeAndSelectionUseAbsoluteDays() {
+        let view = makeCalendarView()
+        var chinese = Calendar(identifier: .chinese)
+        chinese.timeZone = systemCalendar.timeZone
+        view.calendar = chinese
+        view.configuredDateRange = date(2023, 2, 20)...date(2023, 4, 19)
+        view.allowsMultipleSelection = true
+        view.selectDates([date(2023, 2, 20), date(2023, 3, 22)])
+        XCTAssertEqual(view.selectedDates.count, 2)
+        view.selectDates(from: date(2023, 3, 20), through: date(2023, 3, 24), scrollToLastDate: false)
+        XCTAssertEqual(view.selectedDates.count, 5)
+        XCTAssertTrue(view.isDateSelected(date(2023, 3, 22)))
+    }
+
+    func testInvalidIndexPathsReturnNilInsteadOfQueryingCollectionView() {
+        let view = makeCalendarView()
+        XCTAssertNil(view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 0, section: 1000)))
+        XCTAssertNil(view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: -1, section: 0)))
+    }
+
+    func testRightToLeftPagingShowsRequestedMonth() {
+        let view = makeCalendarView()
+        view.semanticContentAttribute = .forceRightToLeft
+        view.collectionView.semanticContentAttribute = .forceRightToLeft
+        view.collectionViewLayout.invalidateDataSourceMetrics()
+        view.setCurrentPage(date(2024, 7, 15), animated: false)
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+        XCTAssertNotNil(view.cell(for: date(2024, 7, 15)))
+        XCTAssertEqual(view.calendar.component(.month, from: view.currentPage), 7)
+        let width = view.collectionView.bounds.width
+        XCTAssertEqual(view.collectionView.contentOffset.x, width * 5, accuracy: 0.1)
+        let first = view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 0, section: 6))
+        let last = view.collectionViewLayout.layoutAttributesForItem(at: IndexPath(item: 6, section: 6))
+        XCTAssertGreaterThan(first?.frame.minX ?? 0, last?.frame.minX ?? 0)
+        view.setCurrentPage(date(2024, 8, 15), animated: false)
+        view.collectionView.layoutIfNeeded()
+        XCTAssertNotNil(view.cell(for: date(2024, 8, 15)))
+        view.collectionView.setContentOffset(CGPoint(x: width * 5, y: 0), animated: false)
+        view.scrollViewDidEndDecelerating(view.collectionView)
+        XCTAssertEqual(view.calendar.component(.month, from: view.currentPage), 7)
+    }
+
+    func testPlaceholderCopiesShareCollectionSelectionState() {
+        let view = makeCalendarView()
+        view.scrollDirection = .vertical
+        view.pagingEnabled = false
+        view.frame.size.height = 700
+        view.setCurrentPage(date(2024, 5, 1), animated: false)
+        view.layoutIfNeeded()
+        view.collectionView.layoutIfNeeded()
+        let selected = date(2024, 5, 31)
+        view.selectDate(selected, scrollToDate: false)
+        let current = view.cell(for: selected, at: .current)
+        let placeholder = view.cell(for: selected, at: .previous)
+        XCTAssertNotNil(current)
+        XCTAssertNotNil(placeholder)
+        XCTAssertTrue(current?.isSelected == true)
+        XCTAssertTrue(placeholder?.isSelected == true)
+        view.deselectDate(selected)
+        XCTAssertFalse(current?.isSelected == true)
+        XCTAssertFalse(placeholder?.isSelected == true)
+    }
+
+    func testHiddenPlaceholdersDoNotJoinSelectionAcrossMonths() {
+        let view = makeCalendarView()
+        view.placeholderType = .none
+        view.selectDates(from: date(2024, 5, 31), through: date(2024, 6, 1), scrollToLastDate: false)
+        XCTAssertEqual(view.cell(for: date(2024, 5, 31))?.selectionPosition, .single)
+    }
+
+    func testCalendarLocaleControlsAccessibilityStringsAndStyleEventCount() {
+        let view = makeCalendarView()
+        view.locale = Locale(identifier: "zh_CN")
+        view.today = date(2024, 5, 11)
+        view.selectDate(date(2024, 5, 11), scrollToDate: false)
+        let cell = view.cell(for: date(2024, 5, 11))
+        XCTAssertTrue(cell?.accessibilityValue?.contains("今天") == true)
+        XCTAssertEqual(view.calendarHeaderView.nextButton.accessibilityLabel, "下一页")
+
+        let eventCell = TFYSwiftCalendarCell(frame: CGRect(x: 0, y: 0, width: 50, height: 50))
+        var style = TFYSwiftCalendarDayStyle()
+        style.eventColors = [.systemBlue, .systemRed]
+        eventCell.apply(date: date(2024, 5, 11), monthPosition: .current, state: [], selectionPosition: .none,
+                        content: .init(), style: style, appearance: view.appearance,
+                        defaultTitle: "11", defaultAccessibilityLabel: "May 11", locale: Locale(identifier: "en_US"))
+        XCTAssertEqual(eventCell.accessibilityValue, "2 events")
+    }
     private func makeCalendarView() -> TFYSwiftCalendar {
         let view = TFYSwiftCalendar(frame: CGRect(x: 0, y: 0, width: 390, height: 300))
         view.calendar = systemCalendar
@@ -560,13 +745,22 @@ private final class DelegateSpy: TFYSwiftCalendarDelegate {
     var selectedDates: [Date] = []
     var reachedSelectionLimits: [Int] = []
     var allowsSelection = true
+    var selectionRequestCount = 0
+    var selectionChangeCount = 0
+    var lastSelection: [Date] = []
 
     func calendar(
         _ calendar: TFYSwiftCalendar,
         shouldSelect date: Date,
         at monthPosition: TFYSwiftCalendarMonthPosition
     ) -> Bool {
-        allowsSelection
+        selectionRequestCount += 1
+        return allowsSelection
+    }
+
+    func calendarSelectionDidChange(_ calendar: TFYSwiftCalendar) {
+        selectionChangeCount += 1
+        lastSelection = calendar.selectedDates
     }
 
     func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {

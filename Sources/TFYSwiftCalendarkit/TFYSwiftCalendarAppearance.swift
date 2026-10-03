@@ -78,6 +78,8 @@ public final class TFYSwiftCalendarAppearance {
     public var fillType: TFYSwiftCalendarFillType = .separate
     public var separatorStyle: TFYSwiftCalendarSeparatorStyle = .none
     public var caseOptions: TFYSwiftCalendarCaseOptions = []
+    /// Retained for source compatibility; title ordering is controlled by `headerDateFormat`.
+    /// 兼容保留属性；实际标题顺序通过 `headerDateFormat` 配置。
     public var headerOrder: TFYSwiftCalendarHeaderOrder = .monthAboveYear
     public var selectionAnimation: TFYSwiftCalendarSelectionAnimation = .scale
     public var selectionAnimationDuration: TimeInterval = 0.18

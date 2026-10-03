@@ -12,8 +12,7 @@ public struct TFYSwiftCalendarMath: Sendable {
     }
 
     public func startOfMonth(for date: Date) -> Date {
-        let components = calendar.dateComponents([.era, .year, .month], from: date)
-        return calendar.date(from: components) ?? startOfDay(for: date)
+        calendar.dateInterval(of: .month, for: date)?.start ?? startOfDay(for: date)
     }
 
     public func startOfWeek(for date: Date) -> Date {

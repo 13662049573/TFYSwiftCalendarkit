@@ -65,8 +65,13 @@ final class DemoEventStore {
         } else {
             granted = try await store.requestAccess(to: .event)
         }
-        guard granted else { return false }
-        let predicate = store.predicateForEvents(withStart: startDate, end: endDate, calendars: nil)
+        guard granted else {
+            events = []
+            return false
+        }
+        let calendar = DemoDate.gregorian
+        let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate)) ?? endDate
+        let predicate = store.predicateForEvents(withStart: calendar.startOfDay(for: startDate), end: end, calendars: nil)
         events = store.events(matching: predicate)
         return true
     }
@@ -77,7 +82,8 @@ final class DemoEventStore {
         return events.filter { event in
             guard let eventStart = event.startDate else { return false }
             let eventEnd = event.endDate ?? eventStart
-            return eventStart < end && eventEnd >= start
+            if eventStart == eventEnd { return eventStart >= start && eventStart < end }
+            return eventStart < end && eventEnd > start
         }
     }
 }

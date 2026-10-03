@@ -64,6 +64,9 @@ public protocol TFYSwiftCalendarDelegate: AnyObject {
     func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool)
     func calendar(_ calendar: TFYSwiftCalendar, willDisplay cell: TFYSwiftCalendarCell, for date: Date)
     func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar)
+    /// Called once after the final selection changes, including range/configuration pruning.
+    /// 选择集合更新完成后调用一次；包括批量选择、日期范围裁剪和选择限制变化。
+    func calendarSelectionDidChange(_ calendar: TFYSwiftCalendar)
     func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int)
     func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle?
     /// Supplies a style with a position that remains stable while adjacent pages are preloaded.
@@ -103,6 +106,7 @@ public extension TFYSwiftCalendarDelegate {
     func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool) {}
     func calendar(_ calendar: TFYSwiftCalendar, willDisplay cell: TFYSwiftCalendarCell, for date: Date) {}
     func calendarCurrentPageDidChange(_ calendar: TFYSwiftCalendar) {}
+    func calendarSelectionDidChange(_ calendar: TFYSwiftCalendar) {}
     func calendar(_ calendar: TFYSwiftCalendar, didReachMaximumSelectionCount maximum: Int) {}
     func calendar(_ calendar: TFYSwiftCalendar, styleFor date: Date) -> TFYSwiftCalendarDayStyle? { nil }
     func calendar(

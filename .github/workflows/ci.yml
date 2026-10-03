@@ -3,21 +3,53 @@ name: iOS CI
 on:
   push:
     branches: [main]
+    tags: ['[0-9]*.[0-9]*.[0-9]*']
   pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      - name: Select Xcode
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      - name: Check release metadata
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            python3 Scripts/validate_release_metadata.py --tag "$GITHUB_REF_NAME"
+          else
+            python3 Scripts/validate_release_metadata.py
+          fi
+      - name: Inspect runner Xcode
+        run: xcodebuild -version
+      - name: Select available iPhone simulator
+        id: simulator
+        shell: bash
+        run: |
+          xcrun simctl list devices available --json > /tmp/tfy-calendar-simulators.json
+          python3 - <<'PYTHON' >> "$GITHUB_OUTPUT"
+          import json
+          with open('/tmp/tfy-calendar-simulators.json') as handle:
+              inventory = json.load(handle)
+          phones = [device for runtime, devices in inventory['devices'].items()
+                    if '.iOS-' in runtime for device in devices
+                    if device.get('isAvailable') and device['name'].startswith('iPhone')]
+          if not phones:
+              raise SystemExit('No available iPhone simulator on this runner.')
+          device = next((phone for phone in phones if phone['state'] == 'Booted'), phones[0])
+          print('id=' + device['udid'])
+          PYTHON
       - name: Test package
         run: >-
           xcodebuild test
           -scheme TFYSwiftCalendarkit
-          -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+          -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.id }}'
+          -derivedDataPath /tmp/TFYCalendarPackageCI
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
       - name: Build example
         run: >-
@@ -25,5 +57,16 @@ jobs:
           -project Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj
           -scheme TFYSwiftCalendarExample
           -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath /tmp/TFYCalendarExampleCI
           CODE_SIGNING_ALLOWED=NO
           SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Install CocoaPods
+        run: gem install cocoapods -v 1.16.2 --no-document
+      - name: Validate local Pod and test spec
+        run: pod lib lint TFYSwiftCalendarkit.podspec --allow-warnings --test-specs=Tests
+      - name: Validate released tag source
+        if: github.ref_type == 'tag'
+        run: pod spec lint TFYSwiftCalendarkit.podspec --allow-warnings --test-specs=Tests

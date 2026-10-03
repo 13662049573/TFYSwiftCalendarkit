@@ -106,4 +106,31 @@ final class TFYSwiftCalendarMathTests: XCTestCase {
         XCTAssertGreaterThan(weekIndex, 0)
         XCTAssertEqual(math.pageIndex(for: math.pageDate(at: weekIndex, scope: .week, startingAt: start), scope: .week, startingAt: start), weekIndex)
     }
+    func testChineseLeapMonthDaysHaveDistinctKeysAndChronologicalOrder() {
+        let gregorian = makeCalendar()
+        var chinese = Calendar(identifier: .chinese)
+        chinese.timeZone = gregorian.timeZone
+        let regular = makeDate(2023, 2, 20, calendar: gregorian)
+        let leap = makeDate(2023, 3, 22, calendar: gregorian)
+        let lateRegular = makeDate(2023, 3, 21, calendar: gregorian)
+        XCTAssertNotEqual(TFYSwiftCalendarDayKey(date: regular, calendar: chinese),
+                          TFYSwiftCalendarDayKey(date: leap, calendar: chinese))
+        XCTAssertLessThan(TFYSwiftCalendarDayKey(date: lateRegular, calendar: chinese),
+                          TFYSwiftCalendarDayKey(date: leap, calendar: chinese))
+        let math = TFYSwiftCalendarMath(calendar: chinese)
+        XCTAssertEqual(math.startOfMonth(for: leap), chinese.startOfDay(for: leap))
+        XCTAssertEqual(math.monthOffset(of: leap, from: regular), 1)
+        XCTAssertEqual(math.pageDate(at: 1, scope: .month, startingAt: regular), math.startOfMonth(for: leap))
+    }
+
+    func testJapaneseEraTransitionDoesNotSplitMonth() {
+        let gregorian = makeCalendar()
+        var japanese = Calendar(identifier: .japanese)
+        japanese.timeZone = gregorian.timeZone
+        let january = makeDate(1989, 1, 10, calendar: gregorian)
+        let math = TFYSwiftCalendarMath(calendar: japanese)
+        XCTAssertEqual(math.startOfMonth(for: january), gregorian.startOfDay(for: makeDate(1989, 1, 1, calendar: gregorian)))
+        XCTAssertEqual(math.numberOfDays(inMonthContaining: january), 31)
+    }
+
 }

@@ -1,6 +1,6 @@
 # TFYSwiftCalendarkit
 
-`TFYSwiftCalendarkit` 是一个支持 iOS 15 及以上版本的纯 Swift 日历组件。它保留了 TFY_Calendar 灵活的 UIKit 使用方式，同时以类型安全的 Swift API 替代 Objective-C 运行时消息转发、私有 KVC、非安全指针和固定秒数日期计算。
+`TFYSwiftCalendarkit` 是一个支持 iOS 16 及以上版本的纯 Swift 日历组件。它保留了 TFY_Calendar 灵活的 UIKit 使用方式，同时以类型安全的 Swift API 替代 Objective-C 运行时消息转发、私有 KVC、非安全指针和固定秒数日期计算。
 
 ## 功能特性
 
@@ -15,6 +15,13 @@
 - 支持动态字体、VoiceOver 和深色模式
 - 提供 UIKit API 和 SwiftUI `UIViewRepresentable` 封装
 - 无第三方运行时依赖
+- 闰月日期独立识别、布局切换保持页码、RTL 分页与 SwiftUI 状态归一化
+
+## 2.0.0 升级说明
+
+2.0.0 最低支持 iOS 16，统一 Swift Package、CocoaPods 和示例工程的系统要求，并修复日期身份、布局切换和 SwiftUI 状态边界。仍需支持 iOS 15 的项目应继续使用 GitHub 的 1.1.0 标签（SPM）。选择集合新增 `calendarSelectionDidChange(_:)` 默认代理回调，已有协议实现无需补充空方法。
+
+当前发布验收与操作步骤见 [2.0.0 发布说明](Documentation/RELEASE_2.0.0.md)。
 
 ## 安装
 
@@ -29,7 +36,7 @@ https://github.com/13662049573/TFYSwiftCalendarkit.git
 也可以在 `Package.swift` 中添加：
 
 ```swift
-.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "1.1.0")
+.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "2.0.0")
 ```
 
 随后将 `TFYSwiftCalendarkit` 添加到应用 Target。
@@ -39,7 +46,7 @@ https://github.com/13662049573/TFYSwiftCalendarkit.git
 在 `Podfile` 中添加：
 
 ```ruby
-pod 'TFYSwiftCalendarkit', '~> 1.1.0'
+pod 'TFYSwiftCalendarkit', '~> 2.0.0'
 ```
 
 然后执行 `pod install`，并通过生成的 `.xcworkspace` 打开项目。
@@ -55,6 +62,7 @@ final class CalendarViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        calendarView.dataSource = self
         calendarView.translatesAutoresizingMaskIntoConstraints = false
         calendarView.locale = Locale(identifier: "zh_CN")
         calendarView.firstWeekday = 2
@@ -71,6 +79,8 @@ final class CalendarViewController: UIViewController {
     }
 }
 ```
+
+上面的控制器通过下面的 extension 实现数据源。为已有日历更换数据源后，调用 `reloadData()` 更新范围与内容。
 
 实现 `TFYSwiftCalendarDataSource` 以提供日期内容，实现 `TFYSwiftCalendarDelegate` 以处理选择事件和按日期配置样式。所有协议方法都有默认实现，因此只需实现实际需要的方法。
 
@@ -148,6 +158,10 @@ calendarView.selectDates(dates, replacingCurrentSelection: true)
 
 实现 `calendar(_:didReachMaximumSelectionCount:)` 可以在达到数量上限时显示提示。使用 `selectedDateBounds`、`visibleDates`、`visibleDateRange` 和 `isDateSelected(_:)` 查询当前状态。同一天作为相邻月份占位日期重复出现时，可以使用 `cell(for:at:)` 或 `frame(for:at:)` 精确定位对应位置。
 
+`calendarSelectionDidChange(_:)` 在最终选择集合变化后调用一次，适合更新选择摘要；它也覆盖日期范围裁剪与数量限制变化。`selectedDate` 表示最晚的已选日期。清空、批量替换与配置限制会强制移除旧日期；`deselectDate(_:)` 尊重 `shouldDeselect`。
+
+默认范围是组件时区内的公历 1970-01-01 至 2099-12-31；即使使用农历等其他展示历法，也不会把这些年份解释为该历法年份。`currentPage` 为月/周起点，范围从月中开始时，它可能早于 `minimumDate`。
+
 切换月视图与周视图：
 
 ```swift
@@ -174,6 +188,8 @@ calendarView.continuousSectionHeaderHeight = 44
 func calendar(_ calendar: TFYSwiftCalendar, boundingRectWillChange bounds: CGRect, animated: Bool)
 ```
 
+`today` 是可控的日期快照；长期显示的日历应在跨日或回到前台时更新为 `Date()`，设置为 `nil` 可关闭今日强调。标题顺序使用 `headerDateFormat`，事件颜色使用 `eventColors`；兼容保留的 `headerOrder` 和指示器 `fallbackColor` 不参与绘制。
+
 ## SwiftUI 快速开始
 
 ```swift
@@ -196,19 +212,23 @@ struct ContentView: View {
 }
 ```
 
+SwiftUI 遵循 `configure` 中的单选/多选设置，不会因为绑定数组包含多个日期而自动开启多选。越界、重复或超出上限的日期会在当前视图更新结束后写回有效集合。`configure` 需要可重复执行；月/周切换保留目标日期锚点。
+
 ## 示例与测试
 
 - 打开 `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` 运行示例应用。菜单包含 11 个完整的 UIKit 和 SwiftUI 示例，涵盖范围选择、EventKit、自定义单元格、月/周切换、连续滚动和按日期配置外观。
 - 在 Xcode 中打开仓库目录，可以直接编辑 Swift Package。
-- 执行 `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,name=iPhone 17' test` 运行测试套件。
+- 先用 `xcrun simctl list devices available` 查找本机模拟器，再执行 `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,id=<模拟器 UUID>' test SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` 运行测试套件。
 
-测试覆盖民用日期边界、夏令时切换、占位日期安全性、批量选择与数量限制、大范围连续滚动、选中区域衔接、无障碍配置、自定义单元格和事件图层复用。连续模式无需实例化所有月份即可计算行布局，内部页面缓存也设置了数量上限。
+当前包含 59 个回归测试，覆盖农历闰月、日本纪元、SwiftUI 绑定归一化、RTL 页码映射、运行时布局切换、无效几何参数，以及民用日期边界、夏令时切换、占位日期安全性、批量选择与数量限制、大范围连续滚动、选中区域衔接、无障碍配置、自定义单元格和事件图层复用。连续模式无需实例化所有月份即可计算行布局，内部页面缓存也设置了数量上限。
+
+本轮优缺点、风险分级、修复证据与剩余验收范围见 [全面质量评估](Documentation/QUALITY_REVIEW.md)。
 
 有关 Objective-C API 对照和行为变化，请参阅 [MIGRATION.md](MIGRATION.md)；有关发布质量检查，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ## 环境要求
 
-- iOS 15+
+- iOS 16+
 - Swift 6 / Xcode 16+
 - UIKit；SwiftUI 支持为可选能力
 

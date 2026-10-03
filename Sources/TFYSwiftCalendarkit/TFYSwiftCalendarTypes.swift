@@ -240,22 +240,27 @@ public struct TFYSwiftCalendarDayStyle {
     }
 }
 
+// A normalized absolute day also distinguishes leap months and orders dates across eras.
 internal struct TFYSwiftCalendarDayKey: Hashable, Comparable {
-    let era: Int
-    let year: Int
-    let month: Int
-    let day: Int
+    let startOfDay: Date
 
     init(date: Date, calendar: Calendar) {
-        let components = calendar.dateComponents([.era, .year, .month, .day], from: date)
-        era = components.era ?? 1
-        year = components.year ?? 1
-        month = components.month ?? 1
-        day = components.day ?? 1
+        startOfDay = calendar.startOfDay(for: date)
     }
 
     static func < (lhs: Self, rhs: Self) -> Bool {
-        (lhs.era, lhs.year, lhs.month, lhs.day) < (rhs.era, rhs.year, rhs.month, rhs.day)
+        lhs.startOfDay < rhs.startOfDay
+    }
+}
+
+internal enum TFYSwiftCalendarGeometry {
+    static func nonnegative(_ value: CGFloat, fallback: CGFloat = 0) -> CGFloat {
+        value.isFinite ? max(0, value) : fallback
+    }
+
+    static func insets(_ value: UIEdgeInsets) -> UIEdgeInsets {
+        UIEdgeInsets(top: nonnegative(value.top), left: nonnegative(value.left),
+                     bottom: nonnegative(value.bottom), right: nonnegative(value.right))
     }
 }
 

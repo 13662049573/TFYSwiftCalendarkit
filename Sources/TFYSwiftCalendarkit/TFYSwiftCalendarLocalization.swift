@@ -20,7 +20,14 @@ internal enum TFYSwiftCalendarLocalization {
         #endif
     }()
 
-    static func string(_ key: String, comment: String) -> String {
-        NSLocalizedString(key, bundle: bundle, comment: comment)
+    static func string(_ key: String, locale: Locale? = nil, comment: String) -> String {
+        guard let locale else { return NSLocalizedString(key, bundle: bundle, comment: comment) }
+        let preferred = Bundle.preferredLocalizations(from: bundle.localizations, forPreferences: [locale.identifier])
+        guard let language = preferred.first,
+              let path = bundle.path(forResource: language, ofType: "lproj"),
+              let localizedBundle = Bundle(path: path) else {
+            return NSLocalizedString(key, bundle: bundle, comment: comment)
+        }
+        return localizedBundle.localizedString(forKey: key, value: key, table: nil)
     }
 }
