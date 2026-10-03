@@ -542,6 +542,49 @@ final class TFYSwiftCalendarViewTests: XCTestCase {
     }
 
 
+    func testRepeatedContentTogglesPreserveCellsSelectionAndScrollPosition() {
+        for continuous in [false, true] {
+            let view = makeCalendarView()
+            if continuous {
+                view.scrollDirection = .vertical
+                view.pagingEnabled = false
+            }
+            view.register(TestCalendarCell.self, forCellReuseIdentifier: "custom")
+            let source = CustomCellDataSource()
+            view.dataSource = source
+            view.reloadData()
+            view.allowsMultipleSelection = true
+            view.appearance.fillType = .linked
+            view.selectDates([date(2024, 5, 15), date(2024, 5, 16), date(2024, 5, 17)], scrollToLastDate: false)
+            view.layoutIfNeeded()
+            view.collectionView.layoutIfNeeded()
+            let originalCells = view.visibleCells
+            XCTAssertFalse(originalCells.isEmpty)
+            let dequeueCount = source.dequeuedCellCount
+            let selectedDates = view.selectedDates
+            let page = view.currentPage
+            let offset = view.collectionView.contentOffset
+            let height = view.preferredHeight
+
+            for toggle in 0..<20 {
+                source.subtitle = toggle.isMultiple(of: 2) ? "农历" : nil
+                source.eventColors = toggle.isMultiple(of: 3) ? [.systemRed, .systemBlue] : []
+                view.reloadVisibleDates()
+                XCTAssertEqual(source.dequeuedCellCount, dequeueCount)
+                XCTAssertEqual(view.selectedDates, selectedDates)
+                XCTAssertEqual(view.currentPage, page)
+                XCTAssertEqual(view.collectionView.contentOffset, offset)
+                XCTAssertEqual(view.preferredHeight, height)
+                for cell in originalCells {
+                    XCTAssertTrue(view.cell(for: cell.representedDate!, at: cell.monthPosition) === cell)
+                    XCTAssertEqual(cell.subtitleLabel.text, source.subtitle)
+                    XCTAssertEqual(cell.eventIndicator.colors, source.eventColors)
+                    XCTAssertEqual(cell.isSelected, view.isDateSelected(cell.representedDate!))
+                }
+            }
+        }
+    }
+
     func testDefaultRangeKeepsGregorianYearsWhenUsingChineseCalendar() {
         let view = TFYSwiftCalendar()
         var chinese = Calendar(identifier: .chinese)
@@ -831,6 +874,12 @@ private final class TestCalendarCell: TFYSwiftCalendarCell {}
 @MainActor
 private final class CustomCellDataSource: TFYSwiftCalendarDataSource {
     var dequeuedCellCount = 0
+    var subtitle: String?
+    var eventColors: [UIColor] = []
+
+    func calendar(_ calendar: TFYSwiftCalendar, contentFor date: Date) -> TFYSwiftCalendarDayContent {
+        TFYSwiftCalendarDayContent(subtitle: subtitle, eventColors: eventColors)
+    }
 
     func calendar(
         _ calendar: TFYSwiftCalendar,

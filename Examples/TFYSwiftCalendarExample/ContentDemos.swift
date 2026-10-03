@@ -12,6 +12,7 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
     private let statusLabel = UILabel()
     private var showsLunar = false
     private var showsEvents = false
+    var isDisplayingCalendarEvents: Bool { showsEvents }
     private var calendarHeightConstraint: NSLayoutConstraint!
 
     override func viewDidLoad() {
@@ -109,13 +110,13 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
 
     @objc private func toggleLunar() {
         showsLunar.toggle()
-        calendarView.reloadData()
+        calendarView.reloadVisibleDates()
     }
 
     @objc private func toggleEvents() {
         showsEvents.toggle()
-        calendarView.reloadData()
-        if showsEvents && eventStore.events.isEmpty { requestCalendarEvents() }
+        calendarView.reloadVisibleDates()
+        if showsEvents && !eventStore.hasLoadedEvents { requestCalendarEvents() }
     }
 }
 
@@ -127,6 +128,7 @@ final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarD
     private let lunarFormatter = TFYSwiftLunarFormatter(timeZone: TimeZone(identifier: "Asia/Shanghai") ?? .current)
     private var showsLunar = false
     private var showsEvents = false
+    var isDisplayingCalendarEvents: Bool { showsEvents }
     private var displayMenuItem: UIBarButtonItem?
 
     override func viewDidLoad() {
@@ -224,14 +226,14 @@ final class FullScreenExampleViewController: UIViewController, TFYSwiftCalendarD
     @objc private func toggleLunar() {
         showsLunar.toggle()
         updateDisplayMenu()
-        calendarView.reloadData()
+        calendarView.reloadVisibleDates()
     }
 
     @objc private func toggleEvents() {
         showsEvents.toggle()
         updateDisplayMenu()
-        calendarView.reloadData()
-        if showsEvents && eventStore.events.isEmpty { requestCalendarEvents() }
+        calendarView.reloadVisibleDates()
+        if showsEvents && !eventStore.hasLoadedEvents { requestCalendarEvents() }
     }
 }
 

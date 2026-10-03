@@ -13,8 +13,9 @@
 - Unified RTL page offsets and columns; mirrored navigation controls and linked-range ends.
 - Synchronized all visible copies of selected dates, disconnected links into hidden placeholders, and restored navigation for repeated selections.
 - Localized accessibility states and day numbers according to the component locale; refreshed visible sticky-header appearance.
-- Fixed midnight/last-day EventKit boundaries and cleared demo event data when permission is denied.
-- Added 20 regression tests and a Chinese quality/risk review with explicit integration contracts.
+- Fixed midnight/last-day EventKit boundaries, cleared demo event data when permission is denied, and kept its permission bridge compatible with Swift 6 isolation checking on older SDKs.
+- Fixed lunar/event toggle flashes in the DIY and full-screen demos with in-place content refresh; coalesced event requests and cached successful empty results.
+- Added 21 regression tests and a Chinese quality/risk review with explicit integration contracts.
 
 ## 1.1.0
 

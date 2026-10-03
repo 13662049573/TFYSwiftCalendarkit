@@ -80,7 +80,7 @@ final class CalendarViewController: UIViewController {
 }
 ```
 
-上面的控制器通过下面的 extension 实现数据源。为已有日历更换数据源后，调用 `reloadData()` 更新范围与内容。
+上面的控制器通过下面的 extension 实现数据源。为已有日历更换数据源后，调用 `reloadData()` 更新范围与内容。仅切换农历、事件、字幕等内容且日期范围不变时，调用 `reloadVisibleDates()` 原地更新，保留日期格、选中背景及滚动位置；后续滚入的日期会自动读取最新数据源。
 
 实现 `TFYSwiftCalendarDataSource` 以提供日期内容，实现 `TFYSwiftCalendarDelegate` 以处理选择事件和按日期配置样式。所有协议方法都有默认实现，因此只需实现实际需要的方法。
 

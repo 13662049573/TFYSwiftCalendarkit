@@ -57,22 +57,43 @@ extension TFYSwiftCalendar {
 final class DemoEventStore {
     private let store = EKEventStore()
     private(set) var events: [EKEvent] = []
+    private(set) var hasLoadedEvents = false
+    private var isRequestingEvents = false
+
+    func beginRequest() -> Bool {
+        guard !isRequestingEvents else { return false }
+        isRequestingEvents = true
+        return true
+    }
+
+    func endRequest() { isRequestingEvents = false }
 
     func loadEvents(from startDate: Date, through endDate: Date) async throws -> Bool {
-        let granted: Bool
-        if #available(iOS 17.0, *) {
-            granted = try await store.requestFullAccessToEvents()
-        } else {
-            granted = try await store.requestAccess(to: .event)
+        // Keep the non-Sendable EventKit store on MainActor on older SDKs as well.
+        let granted = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Bool, any Error>) in
+            let completion: @Sendable (Bool, (any Error)?) -> Void = { granted, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: granted)
+                }
+            }
+            if #available(iOS 17.0, *) {
+                store.requestFullAccessToEvents(completion: completion)
+            } else {
+                store.requestAccess(to: .event, completion: completion)
+            }
         }
         guard granted else {
             events = []
+            hasLoadedEvents = false
             return false
         }
         let calendar = DemoDate.gregorian
         let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: endDate)) ?? endDate
         let predicate = store.predicateForEvents(withStart: calendar.startOfDay(for: startDate), end: end, calendars: nil)
         events = store.events(matching: predicate)
+        hasLoadedEvents = true
         return true
     }
 
@@ -94,20 +115,26 @@ protocol EventDemoPresenting: AnyObject {
     var eventMinimumDate: Date { get }
     var eventMaximumDate: Date { get }
     var calendarView: TFYSwiftCalendar { get }
+    var isDisplayingCalendarEvents: Bool { get }
 }
 
 extension EventDemoPresenting where Self: UIViewController {
     func requestCalendarEvents() {
+        let store = eventStore
+        guard store.beginRequest() else { return }
         Task { [weak self] in
+            defer { store.endRequest() }
             guard let self else { return }
             do {
                 let granted = try await eventStore.loadEvents(from: eventMinimumDate, through: eventMaximumDate)
+                guard isDisplayingCalendarEvents else { return }
                 guard granted else {
                     presentDemoAlert(title: "无法读取事件", message: "请在系统设置中允许访问日历；农历和其他示例功能仍可正常使用。")
                     return
                 }
-                calendarView.reloadData()
+                calendarView.reloadVisibleDates()
             } catch {
+                guard isDisplayingCalendarEvents else { return }
                 presentDemoAlert(title: "事件读取失败", message: error.localizedDescription)
             }
         }
