@@ -44,18 +44,25 @@ def main():
     require(f'from: "{version}"' in readme and f"'~> {version}'" in readme,
             "README installation examples differ from CocoaPods.")
     require(f"iOS {minimum}+" in readme, "README minimum differs from CocoaPods.")
+    # The repository currently uses XCTest method tests; keep published counts in sync.
+    test_count = sum(len(re.findall(r"^\s+func test\w+\(", path.read_text(encoding="utf-8"), re.MULTILINE))
+                     for path in (ROOT / "Tests").rglob("*.swift"))
+    require(f"当前包含 {test_count} 个回归测试" in readme, "README test count differs from XCTest methods.")
     require(f"Minimum deployment target: iOS {minimum}" in read("CONTRIBUTING.md"),
             "Contributor requirements differ from CocoaPods.")
     require(f"iOS {minimum} or later" in read("Examples/TFYSwiftCalendarExample/README.md"),
             "Example README minimum differs from CocoaPods.")
     release_notes = ROOT / f"Documentation/RELEASE_{version}.md"
     require(release_notes.is_file(), "Release notes are missing.")
+    if release_notes.is_file():
+        require(f"回归测试共 {test_count} 项" in release_notes.read_text(encoding="utf-8"),
+                "Release notes test count differs from XCTest methods.")
     require(":tag => spec.version.to_s" in spec, "Pod source must use the exact release version as its tag.")
     if args.tag:
         require(args.tag == version, f"Release tag must be {version}, received {args.tag}.")
     if errors:
         parser.exit(1, "\n".join(f"ERROR: {message}" for message in errors) + "\n")
-    print(f"Release metadata consistent: {version}, iOS {minimum}+, SPM/CocoaPods/example/docs.")
+    print(f"Release metadata consistent: {version}, iOS {minimum}+, SPM/CocoaPods/example/docs, {test_count} XCTest methods.")
 
 
 if __name__ == "__main__":

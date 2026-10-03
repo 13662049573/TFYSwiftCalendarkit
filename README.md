@@ -21,7 +21,7 @@
 
 2.0.0 最低支持 iOS 16，统一 Swift Package、CocoaPods 和示例工程的系统要求，并修复日期身份、布局切换和 SwiftUI 状态边界。仍需支持 iOS 15 的项目应继续使用 GitHub 的 1.1.0 标签（SPM）。选择集合新增 `calendarSelectionDidChange(_:)` 默认代理回调，已有协议实现无需补充空方法。
 
-当前发布验收与操作步骤见 [2.0.0 发布说明](Documentation/RELEASE_2.0.0.md)。
+发布操作步骤见 [2.0.0 发布说明](Documentation/RELEASE_2.0.0.md)，实际发布状态与证据见 [2.0.0 验收记录](Documentation/RELEASE_VERIFICATION_2.0.0.md)。
 
 ## 安装
 
