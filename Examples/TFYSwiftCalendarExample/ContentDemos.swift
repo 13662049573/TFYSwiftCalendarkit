@@ -30,6 +30,9 @@ final class DIYExampleViewController: UIViewController, TFYSwiftCalendarDataSour
         calendarView.appearance.eventSelectionColor = .white
         calendarView.appearance.selectionColor = .systemOrange
         calendarView.appearance.fillType = .linked
+        // Apply the data source range and appearance once before the first display.
+        // Content switches below then only need to refresh visible dates in place.
+        calendarView.reloadData()
 
         statusLabel.font = .preferredFont(forTextStyle: .footnote)
         statusLabel.textColor = .secondaryLabel

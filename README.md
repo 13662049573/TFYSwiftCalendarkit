@@ -218,9 +218,9 @@ SwiftUI 遵循 `configure` 中的单选/多选设置，不会因为绑定数组�
 
 - 打开 `Examples/TFYSwiftCalendarExample/TFYSwiftCalendarExample.xcodeproj` 运行示例应用。菜单包含 11 个完整的 UIKit 和 SwiftUI 示例，涵盖范围选择、EventKit、自定义单元格、月/周切换、连续滚动和按日期配置外观。
 - 在 Xcode 中打开仓库目录，可以直接编辑 Swift Package。
-- 先用 `xcrun simctl list devices available` 查找本机模拟器，再执行 `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,id=<模拟器 UUID>' test SWIFT_TREAT_WARNINGS_AS_ERRORS=YES` 运行测试套件。
+- 先用 `xcrun simctl list devices available` 查找本机模拟器，再执行 `xcodebuild -scheme TFYSwiftCalendarkit -destination 'platform=iOS Simulator,id=<模拟器 UUID>' test SWIFT_TREAT_WARNINGS_AS_ERRORS=YES SWIFT_SUPPRESS_WARNINGS=NO` 运行测试套件。
 
-当前包含 59 个回归测试，覆盖农历闰月、日本纪元、SwiftUI 绑定归一化、RTL 页码映射、运行时布局切换、无效几何参数，以及民用日期边界、夏令时切换、占位日期安全性、批量选择与数量限制、大范围连续滚动、选中区域衔接、无障碍配置、自定义单元格和事件图层复用。连续模式无需实例化所有月份即可计算行布局，内部页面缓存也设置了数量上限。
+当前包含 60 个回归测试，覆盖农历闰月、日本纪元、SwiftUI 绑定归一化、RTL 页码映射、运行时布局切换、无效几何参数，以及民用日期边界、夏令时切换、占位日期安全性、批量选择与数量限制、大范围连续滚动、选中区域衔接、无障碍配置、自定义单元格和事件图层复用。连续模式无需实例化所有月份即可计算行布局，内部页面缓存也设置了数量上限。
 
 本轮优缺点、风险分级、修复证据与剩余验收范围见 [全面质量评估](Documentation/QUALITY_REVIEW.md)。
 
