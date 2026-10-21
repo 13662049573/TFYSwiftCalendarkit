@@ -19,6 +19,10 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
     }
 
     private func setUpViews() {
+        TFYSwiftCalendarTraitRegistration.registerInterfaceStyleChanges(on: self) { [weak self] in
+            self?.refreshWeekdayBorderColors()
+        }
+
         stackView.axis = .horizontal
         stackView.distribution = .fillEqually
         stackView.alignment = .fill
@@ -90,8 +94,14 @@ public final class TFYSwiftCalendarWeekdayView: UIView {
 
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        guard previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? true,
-              let appearance = appliedAppearance else { return }
+        TFYSwiftCalendarTraitRegistration.handleLegacyInterfaceStyleChange(
+            on: self,
+            previousTraitCollection: previousTraitCollection
+        ) { refreshWeekdayBorderColors() }
+    }
+
+    private func refreshWeekdayBorderColors() {
+        guard let appearance = appliedAppearance else { return }
         for label in weekdayLabels where label.layer.borderWidth > 0 {
             label.layer.borderColor = appearance.weekdayLabelBorderColor
                 .resolvedColor(with: traitCollection)

@@ -436,7 +436,7 @@ open class TFYSwiftCalendar: UIView {
             self.superview?.layoutIfNeeded()
             self.layoutIfNeeded()
         }
-        if animated {
+        if animated, !UIAccessibility.isReduceMotionEnabled {
             UIView.animate(
                 withDuration: TFYSwiftCalendarDefaults.animationDuration,
                 delay: 0,

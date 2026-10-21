@@ -36,7 +36,7 @@ https://github.com/13662049573/TFYSwiftCalendarkit.git
 也可以在 `Package.swift` 中添加：
 
 ```swift
-.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "2.0.0")
+.package(url: "https://github.com/13662049573/TFYSwiftCalendarkit.git", from: "2.0.1")
 ```
 
 随后将 `TFYSwiftCalendarkit` 添加到应用 Target。
@@ -46,7 +46,7 @@ https://github.com/13662049573/TFYSwiftCalendarkit.git
 在 `Podfile` 中添加：
 
 ```ruby
-pod 'TFYSwiftCalendarkit', '~> 2.0.0'
+pod 'TFYSwiftCalendarkit', '~> 2.0.1'
 ```
 
 然后执行 `pod install`，并通过生成的 `.xcworkspace` 打开项目。
