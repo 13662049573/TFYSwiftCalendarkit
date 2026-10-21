@@ -43,8 +43,8 @@ public final class TFYSwiftCalendarHeaderView: UIView {
         )
         previousButton.accessibilityIdentifier = "TFYSwiftCalendar.previousPage"
         nextButton.accessibilityIdentifier = "TFYSwiftCalendar.nextPage"
-        previousButton.addTarget(self, action: #selector(previousTapped), for: .touchUpInside)
-        nextButton.addTarget(self, action: #selector(nextTapped), for: .touchUpInside)
+        previousButton.addAction(UIAction { [weak self] _ in self?.onPrevious?() }, for: .touchUpInside)
+        nextButton.addAction(UIAction { [weak self] _ in self?.onNext?() }, for: .touchUpInside)
 
         addSubview(titleLabel)
         addSubview(previousButton)
@@ -87,9 +87,6 @@ public final class TFYSwiftCalendarHeaderView: UIView {
         previousButton.isEnabled = canGoPrevious
         nextButton.isEnabled = canGoNext
     }
-
-    @objc private func previousTapped() { onPrevious?() }
-    @objc private func nextTapped() { onNext?() }
 }
 
 @MainActor

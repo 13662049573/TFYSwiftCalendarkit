@@ -25,6 +25,7 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
         isUserInteractionEnabled = false
         backgroundColor = .clear
         isAccessibilityElement = false
+        installInterfaceStyleObservation()
     }
 
     public required init?(coder: NSCoder) {
@@ -32,6 +33,13 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
         isUserInteractionEnabled = false
         backgroundColor = .clear
         isAccessibilityElement = false
+        installInterfaceStyleObservation()
+    }
+
+    private func installInterfaceStyleObservation() {
+        TFYSwiftCalendarTraitRegistration.registerInterfaceStyleChanges(on: self) { [weak self] in
+            self?.setNeedsLayout()
+        }
     }
 
     public override func layoutSubviews() {
@@ -68,8 +76,9 @@ public final class TFYSwiftCalendarEventIndicator: UIView {
 
     public override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        if previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? true {
-            setNeedsLayout()
-        }
+        TFYSwiftCalendarTraitRegistration.handleLegacyInterfaceStyleChange(
+            on: self,
+            previousTraitCollection: previousTraitCollection
+        ) { setNeedsLayout() }
     }
 }

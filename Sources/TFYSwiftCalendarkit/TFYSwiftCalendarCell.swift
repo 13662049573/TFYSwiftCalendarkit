@@ -54,6 +54,10 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
         eventIndicator.isHidden = true
         clipsToBounds = false
         contentView.clipsToBounds = false
+
+        TFYSwiftCalendarTraitRegistration.registerInterfaceStyleChanges(on: self) { [weak self] in
+            self?.configureAppearance()
+        }
     }
 
     open override func prepareForReuse() {
@@ -269,9 +273,10 @@ open class TFYSwiftCalendarCell: UICollectionViewCell {
 
     open override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
         super.traitCollectionDidChange(previousTraitCollection)
-        if previousTraitCollection?.hasDifferentColorAppearance(comparedTo: traitCollection) ?? true {
-            configureAppearance()
-        }
+        TFYSwiftCalendarTraitRegistration.handleLegacyInterfaceStyleChange(
+            on: self,
+            previousTraitCollection: previousTraitCollection
+        ) { configureAppearance() }
     }
 
     private func selectionPath(in baseRect: CGRect) -> UIBezierPath {

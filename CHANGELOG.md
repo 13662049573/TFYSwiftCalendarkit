@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+- Adopted `registerForTraitChanges` for dynamic color updates on iOS 17 and later, while keeping `traitCollectionDidChange` handling on iOS 16.
+- Replaced header navigation `#selector` targets with `UIAction` handlers.
+- Honored Reduce Motion when animating month/week scope layout changes.
+
 ## 2.0.0
 
 - **Breaking compatibility:** raised the minimum deployment target from iOS 15 to iOS 16 across SPM, CocoaPods, SwiftUI and the example app.
